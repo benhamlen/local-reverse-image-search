@@ -1,4 +1,9 @@
 {
-    "search_dirs_paths": ["media", "media2"],
+    "search_dirs_paths": [ 
+                            "media/test1",
+                            "media/test2",
+                            "media/test3"
+                        ],
+
     "query_img_path": "ren.jpeg"
 }
