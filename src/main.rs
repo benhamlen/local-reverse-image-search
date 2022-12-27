@@ -99,7 +99,7 @@ fn get_image_hashes_and_dists(img_paths: &Vec<String>, query_img_path: &String) 
         Ok(query_img) => {
 
             /* get hash for query image */
-            let query_img_hash = hasher.hash_image(&query_img);
+            let query_img_hash = hasher.hash_image(&query_img.resize(IMAGE_RESIZE_SIZE[0], IMAGE_RESIZE_SIZE[1], FilterType::Nearest));
 
             /* get hashes and distances for all search images */
             for path in tqdm!(img_paths.iter(), desc="calculating image hashes and similarities") {
