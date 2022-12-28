@@ -1,13 +1,20 @@
+/* my modules */
+/* ---------- */
 mod args;
 
-use clap::Parser;
-use args::ReverseImageSearchArgs;
+mod cache;
+use cache::{ImgInfo, Cache};
+
+/* 3rd party modules */
+/* ----------------- */
+// use clap::Parser;
+// use args::ReverseImageSearchArgs;
 use image::ImageError;
-use rayon::prelude::IntoParallelRefIterator;
-use std::fs::File;
+// use rayon::prelude::IntoParallelRefIterator;
+// use std::fs::File;
 use std::fs;
-use std::io::{self, BufRead};
-use std::ops::Index;
+// use std::io::{self, BufRead};
+// use std::ops::Index;
 use std::path::Path;
 use image_hasher::{HasherConfig, ImageHash};
 use image::imageops::FilterType;
@@ -18,125 +25,11 @@ use serde::{Deserialize, Serialize};
 use serde_json::Result;
 
 const CONFIG_PATH_DEFAULT: &str = "config.json";
-const CACHE_PATH: &str = "cache.json";
 const IMAGE_RESIZE_SIZE: [u32; 2] = [100,100];
 
 #[derive(Debug, Serialize, Deserialize)]
-// #[derive(Debug)]
-struct CachedImgInfo{
-    /// the ImageHash object doesn't work with serde so will be saving the base64 representation then
-    /// using the ImageHash::from_base64() method to create a new instance from the base64 representation
-    hash_base64: String,
-    path: String,
-    dist: u32
-}
-
-impl CachedImgInfo {
-    fn from_noncached(info: ImgInfo) -> CachedImgInfo {
-        CachedImgInfo { hash_base64: info.hash.to_base64(),
-                        path: info.path,
-                        dist: info.dist}
-    }
-
-    fn to_noncached(&self) -> ImgInfo {
-        ImgInfo {   hash: ImageHash::from_base64(&self.hash_base64).unwrap(),
-                    path: self.path.clone(),
-                    dist: self.dist }
-    }
-}
-
-struct ImgInfo {
-    hash: ImageHash,
-    path: String,
-    dist: u32
-}
-
-impl ImgInfo {
-    fn from_cached(info: CachedImgInfo) -> ImgInfo {
-        ImgInfo {   hash: ImageHash::from_base64(&info.hash_base64).unwrap(),
-                    path: info.path,
-                    dist: info.dist}
-    }
-
-    fn to_cached(&self) -> CachedImgInfo {
-        CachedImgInfo { hash_base64: self.hash.to_base64(),
-                        path: self.path.clone(),
-                        dist: self.dist }
-    }
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-struct Cache {
-    info: Vec<CachedImgInfo>
-}
-
-impl Cache {
-
-    fn merge(&mut self, imginfos: Vec<ImgInfo>) {
-        for entry in imginfos {
-            self.info.push(CachedImgInfo { hash_base64: entry.hash.to_base64(), path: entry.path.clone(), dist: entry.dist })
-        }
-    }
-
-    fn blank() -> Cache {
-        Cache { info: Vec::new() }
-    }
-
-    fn new() -> Cache {
-
-        /* if existing cache, load and return that */
-        if Path::new(CACHE_PATH).exists() {
-            println!("loading cache from file");
-            return Cache::from_file(CACHE_PATH);
-        }
-
-        /* if no existing cache, return a new blank one */
-        else {
-            println!("no cache found, making new one");
-            return Cache::blank()
-        }
-    }
-
-    fn get_all_paths(&self) -> Vec<String> {
-        let mut paths: Vec<String> = Vec::new();
-
-        for entry in self.info.iter() {
-            paths.push(entry.path.clone());
-        }
-
-        paths
-    }
-
-    fn from_vec(data: Vec<CachedImgInfo>) -> Cache{
-        Cache { info: data }
-    }
-
-    fn from_file(path: &str) -> Cache {
-        let cache_string = fs::read_to_string(path)
-            .expect("Unable to read file");
-        serde_json::from_str::<Cache>(cache_string.as_str())
-            .expect("Unable to deserialize cache json file")
-    }
-
-    fn save(&self) {
-        let cache_string = serde_json::to_string(&self)
-            .expect("unable to serialize cache into string");
-        fs::write(CACHE_PATH, cache_string)
-            .expect("Unable to write file");
-    }
-
-    fn remove_paths_already_in_cache(&self, scanned_paths: Vec<String>) -> Vec<String> {
-        let cached_paths = self.get_all_paths();
-
-        scanned_paths.into_iter()
-                .filter(|x| !cached_paths.contains(x))
-                .collect()
-    }
-    
-}
-
-#[derive(Debug, Serialize, Deserialize)]
 struct Config {
+    cache_path: String,
     search_dirs_paths: Vec<String>,
     query_img_path: String
 }
@@ -236,13 +129,18 @@ fn main() {
     let config = load_config(CONFIG_PATH_DEFAULT).unwrap();
 
     /* create new cache handler struct */
-    let mut cache = Cache::new();
+    let mut cache = Cache::new(&config.cache_path);
 
     /* get all image file paths in search directories */
     let img_paths = find_image_files(&config.search_dirs_paths);
 
-    /* remove paths already in cache */
-    let img_paths = cache.remove_paths_already_in_cache(img_paths);
+    /* cache new images */
+
+
+    /* search through cache for query img */
+
+    // /* remove paths already in cache */
+    // let img_paths = cache.remove_paths_already_in_cache(img_paths);
 
     /* get hashes for newly-scanned files */
     let (imginfos, errored_files) = get_hashes_and_dists(img_paths, &config.query_img_path);
@@ -251,6 +149,7 @@ fn main() {
 
     /* show if any files failed to open */
     if errored_files.len() > 0 {
+        println!("----------------");
         println!("the following files failed to open");
         for err in errored_files.iter() {
             println!("{:#?}", err);
@@ -266,6 +165,7 @@ fn main() {
     /* print exact matches */
     for entry in cache.info.iter() {
         if entry.dist == 0 {
+            println!("----------------");
             println!("MATCH: {:#?}", entry);
         }
         else {

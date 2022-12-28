@@ -1,4 +1,5 @@
 {
+    "cache_path": "cache.json",
     "search_dirs_paths": [ 
                             "media/test1",
                             "media/test2",
