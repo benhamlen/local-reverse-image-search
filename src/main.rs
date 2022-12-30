@@ -94,21 +94,30 @@ fn main() {
     let config = load_config(CONFIG_PATH_DEFAULT).unwrap();
 
     /* create new cache handler struct instance */
-    let mut cache = Cache::new(&config.cache_path);
+    let mut _cache = Cache::new(&config.cache_path);
 
     /* get all image file paths in search directories */
     let img_paths = find_image_files(&config.search_dirs_paths);
 
     /* get info for query img */
-    let info_query = extract_single(&config.query_img_path);
+    let (_kp_query, desc_query) = extract_single(&config.query_img_path);
 
     /* get info for search imgs */
-    let info_search = extract_kps_and_descs(img_paths);
+    let info_search_arc = calculate_similarities(&desc_query, img_paths);
 
-    let similarities: Vec<i32> = Vec::new();
-    for info in info_search.lock().unwrap().iter() {
-        
+    let mut info_search = info_search_arc.lock().unwrap();
+
+    info_search.sort_by_key(|x| x.num_matches);
+    info_search.reverse();
+
+    for info in info_search.iter() {
+        println!("{}", info);
     }
+
+    // let similarities: Vec<i32> = Vec::new();
+    // for info in info_search.lock().unwrap().iter() {
+        
+    // }
 
     /* get number of matches between query image and each  */
 

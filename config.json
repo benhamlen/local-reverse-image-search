@@ -6,5 +6,5 @@
                             "media/test3"
                         ],
 
-    "query_img_path": "query.jpeg"
+    "query_img_path": "media/query/query.jpeg"
 }
