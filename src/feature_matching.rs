@@ -11,6 +11,8 @@ use kdam::{tqdm, BarExt};
 use image::imageops::FilterType;
 // use std::collections::HashMap;
 use std::fmt;
+use console::{style, Emoji};
+use indicatif::{HumanDuration, MultiProgress, ProgressBar, ProgressStyle};
 
 // use kiddo::KdTree;
 // use kiddo::ErrorKind;
@@ -28,7 +30,7 @@ pub struct ImgInfo {
 
 impl fmt::Display for ImgInfo {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "IMGINFO --> path: {}, matches: {}", self.path.clone(), self.num_matches)
+        write!(f, "IMGINFO --> matches: {:>4}, path: {}", self.num_matches, self.path.clone())
     }
 }
 
@@ -58,6 +60,11 @@ fn bitarray_to_floatarray(ba: &BitArray<64>) -> Vec<f32> {
 fn get_num_matches(descs_query: &Vec<BitArray<64>>, descs_search: (&Vec<BitArray<64>>, &String)) -> u32 {
 
     let (descs, path) = descs_search;
+
+    // let sty = ProgressStyle::with_template("{bar:40.cyan/blue} {pos:>7}/{len:7} {prefix:.bold.dim} {msg}").unwrap();
+    // pb.set_length(descs_query.len() as u64);
+    // pb.set_style(sty.clone());
+    // pb.set_prefix(format!("{}", path));
     
     /* fit nearest neighbors classifier to query descriptors */
     // let mut kdtree: KdTree<u8, String, 64> = KdTree::new();
@@ -97,23 +104,33 @@ fn get_num_matches(descs_query: &Vec<BitArray<64>>, descs_search: (&Vec<BitArray
         if res[0].1 < 0.65 * res[1].1 {
             num_matches += 1;
         }
+
+        // pb.inc(1);
     }
+
+    // pb.finish_with_message(format!(" --> {} matches", num_matches));
 
     num_matches
 }
 
 pub fn calculate_similarities(query_desc: &Vec<BitArray<64>>, search_paths: Vec<String>) -> Arc<Mutex<Vec<ImgInfo>>> {
+    
 
     let info: Arc<Mutex<Vec<ImgInfo>>> = Arc::new(Mutex::new(Vec::new()));
     
     let mut handles = Vec::new();
     let pb = Arc::new(Mutex::new(tqdm!(total=search_paths.len(), desc="extracting features")));
 
+    // let m = MultiProgress::new();
+    // let pb = ProgressBar::new(search_paths.len() as u64);
+
     /* multithreaded batch feature extraction */
     for path in search_paths {
         let thisinfo = info.clone();
         let thispb = pb.clone();
         let this_qdesc = query_desc.clone();
+
+        // let pb = m.add(ProgressBar::new(0));
 
         handles.push(thread::spawn(move || {
 
@@ -126,20 +143,20 @@ pub fn calculate_similarities(query_desc: &Vec<BitArray<64>>, search_paths: Vec<
             /* increment progress bar */
             let mut p = thispb.lock().unwrap();
             p.update(1);
-            p.write(format!("{} -> {} matches", path, num_matches));
+            p.write(format!("{} -> {} matches", style(path.clone()).bold().blue(), num_matches));
 
             /* add extracted info to output */
             thisinfo.lock().unwrap().push(ImgInfo { path, keypoints, descriptors, num_matches});
         }));
 
     }
+    eprint!("\n");
 
     /* make sure all threads are finished before returning */
-    
     for handle in handles {
         handle.join().unwrap();
     }
-    eprint!("\n");
+    // m.clear().unwrap();
 
     info
 

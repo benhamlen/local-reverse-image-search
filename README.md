@@ -1,6 +1,7 @@
 # local-reverse-image-search
 
 ## todo:
+- transfer to indicatif progress bars
 - handle deleted images
   - remove from cache?
   - keep in cache but set a flag of some kind?

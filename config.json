@@ -1,10 +1,9 @@
 {
     "cache_path": "cache.json",
-
     "search_dirs_paths": [  "media/test1",
                             "media/test2",
                             "media/test3"
                         ],
-
-    "query_img_path": "media/query/query.jpeg"
+    "query_img_path": "media/query/ren.jpeg",
+    "resize_dimensions": [256, 256]
 }
