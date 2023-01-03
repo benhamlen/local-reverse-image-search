@@ -1170,11 +1170,14 @@ dependencies = [
  "image_hasher",
  "indicatif",
  "kdam",
+ "num_cpus",
  "pbr",
+ "rayon",
  "serde",
  "serde_json",
  "show-image",
  "statistical",
+ "thread-priority",
  "walkdir",
 ]
 
@@ -2351,6 +2354,7 @@ checksum = "0b8a66a2f47667d404f77403a68263263b52af6c1136bccdad448bb1c38ac215"
 dependencies = [
  "futures",
  "glam",
+ "image 0.24.5",
  "indexmap",
  "rustc_version",
  "show-image-macros",
@@ -2525,6 +2529,18 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
+]
+
+[[package]]
+name = "thread-priority"
+version = "0.10.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "978519ae4c6891352f964b88da4ab5a3a9b74a40247cda5baee145dae6cd3b71"
+dependencies = [
+ "cfg-if 1.0.0",
+ "libc",
+ "log",
+ "winapi",
 ]
 
 [[package]]

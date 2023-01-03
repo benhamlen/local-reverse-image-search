@@ -1,3 +1,5 @@
+use crate::config::Config;
+
 // use std::path::Path;
 // use cv::{feature::akaze::Akaze, KeyPoint, BitArray};
 // use cv::feature::akaze
@@ -13,6 +15,10 @@ use image::imageops::FilterType;
 use std::fmt;
 use console::{style, Emoji};
 use indicatif::{HumanDuration, MultiProgress, ProgressBar, ProgressStyle};
+use num_cpus;
+use thread_priority::*;
+
+// use rayon::ThreadPool;
 
 // use kiddo::KdTree;
 // use kiddo::ErrorKind;
@@ -34,13 +40,15 @@ impl fmt::Display for ImgInfo {
     }
 }
 
-pub fn extract_single(path: &String) -> (Vec<KeyPoint>, Vec<BitArray<64>>) {
+pub fn extract_single(cfg: &Config, path: &String) -> (Vec<KeyPoint>, Vec<BitArray<64>>) {
 
     /* make new feature extractor */
     let akaze = Akaze::default();
 
     /* extract keypoints and descriptors */
-    let img = image::open(&path).unwrap().resize(512, 512, FilterType::Nearest);
+    let [nwidth, nheight] = cfg.resize_dimensions;
+    let filter = FilterType::Nearest;
+    let img = image::open(&path).unwrap().resize(nwidth, nheight, filter);
     // let img = image::open(&path).unwrap();
 
     /* return extracted info */
@@ -101,7 +109,7 @@ fn get_num_matches(descs_query: &Vec<BitArray<64>>, descs_search: (&Vec<BitArray
         let res = index.search(&granne::angular::Vector::from(qvecf32), 200, 10);
 
         /* do ratio test */
-        if res[0].1 < 0.65 * res[1].1 {
+        if res.len() > 1 && res[0].1 < 0.65 * res[1].1 {
             num_matches += 1;
         }
 
@@ -113,49 +121,71 @@ fn get_num_matches(descs_query: &Vec<BitArray<64>>, descs_search: (&Vec<BitArray
     num_matches
 }
 
-pub fn calculate_similarities(query_desc: &Vec<BitArray<64>>, search_paths: Vec<String>) -> Arc<Mutex<Vec<ImgInfo>>> {
+pub fn calculate_similarities(cfg: &Config, query_desc: &Vec<BitArray<64>>, search_paths: Vec<String>) -> Arc<Mutex<Vec<ImgInfo>>> {
     
 
     let info: Arc<Mutex<Vec<ImgInfo>>> = Arc::new(Mutex::new(Vec::new()));
     
-    let mut handles = Vec::new();
+    // let mut handles = Vec::new();
     let pb = Arc::new(Mutex::new(tqdm!(total=search_paths.len(), desc="extracting features")));
 
     // let m = MultiProgress::new();
     // let pb = ProgressBar::new(search_paths.len() as u64);
 
+    /* determine num workers */
+    let num_workers = match cfg.num_workers {
+        0 => num_cpus::get(),
+        _ => cfg.num_workers as usize
+    };
+    println!("{} workers", num_workers);
+
+    // let pool = ThreadPool::new(num_workers);
+    let pool = rayon::ThreadPoolBuilder::new().num_threads(num_workers).build().unwrap();
+
+    let chunks = search_paths.chunks(search_paths.len() / num_workers);
+
+
     /* multithreaded batch feature extraction */
-    for path in search_paths {
+    for chunk in chunks {
         let thisinfo = info.clone();
         let thispb = pb.clone();
         let this_qdesc = query_desc.clone();
 
         // let pb = m.add(ProgressBar::new(0));
 
-        handles.push(thread::spawn(move || {
+        // pool.execute(move || {
+        pool.install(move || {
 
-            /* get keypoints and descriptors for this search image */
-            let (keypoints, descriptors) = extract_single(&path);
+            // set_current_thread_priority(ThreadPriority::Max).unwrap();
 
-            /* calculte similarity to query image (num matches) */
-            let num_matches = get_num_matches(&this_qdesc, (&descriptors, &path));
+            for path in chunk.to_owned() {    
+                /* get keypoints and descriptors for this search image */
+                let (keypoints, descriptors) = extract_single(&cfg, &path);
+    
+                /* calculte similarity to query image (num matches) */
+                let num_matches = get_num_matches(&this_qdesc, (&descriptors, &path));
+    
+                /* increment progress bar */
+                let mut p = thispb.lock().unwrap();
+                p.update(1);
+                p.write(format!("{} -> {} matches", style(path.clone()).bold().blue(), num_matches));
+    
+                /* add extracted info to output */
+                let mut thisinfo_guard = thisinfo.lock().unwrap();
+                thisinfo_guard.push(ImgInfo { path, keypoints, descriptors, num_matches});
+                drop(thisinfo_guard);
+            }
+        });
 
-            /* increment progress bar */
-            let mut p = thispb.lock().unwrap();
-            p.update(1);
-            p.write(format!("{} -> {} matches", style(path.clone()).bold().blue(), num_matches));
-
-            /* add extracted info to output */
-            thisinfo.lock().unwrap().push(ImgInfo { path, keypoints, descriptors, num_matches});
-        }));
+        // pool.join();
 
     }
     eprint!("\n");
 
     /* make sure all threads are finished before returning */
-    for handle in handles {
-        handle.join().unwrap();
-    }
+    // for handle in handles {
+    //     handle.join().unwrap();
+    // }
     // m.clear().unwrap();
 
     info

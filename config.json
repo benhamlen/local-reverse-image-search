@@ -1,9 +1,19 @@
 {
+    "query_img_path": "media/query/00317_20_jpg.rf.94dccafb5253f61d5ed744ed69cbc9a6.jpg",
+    "search_dirs_paths": [
+        "media/axial-mri",
+        "media/cloud-types",
+        "media/aquarium"
+    ],
     "cache_path": "cache.json",
-    "search_dirs_paths": [  "media/test1",
-                            "media/test2",
-                            "media/test3"
-                        ],
-    "query_img_path": "media/query/ren.jpeg",
-    "resize_dimensions": [256, 256]
+    "outlier_stddev_thresh": 5.0,
+    "resize_dimensions": [256, 256],
+    "valid_file_extensions": [
+        "png",
+        "jpg",
+        "jpeg",
+        "tif",
+        "tiff"
+    ],
+    "num_workers": 0
 }
