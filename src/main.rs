@@ -155,7 +155,7 @@ fn main() {
     let config = load_config(CONFIG_PATH_DEFAULT).unwrap();
 
     /* create new cache handler struct instance */
-    let mut _cache = Cache::new(&config.cache_path);
+    // let mut _cache = Cache::new(&config.cache_path);
 
     /* get info for query img */
     let (_kp_query, desc_query) = extract_single(config.resize_dimensions.clone(), &config.query_img_path);
