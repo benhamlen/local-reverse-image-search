@@ -7,7 +7,7 @@ use crate::config::Config;
 // use cv::{feature::akaze::Akaze, KeyPoint, BitArray};
 // use cv::feature::akaze
 use akaze::{Akaze, KeyPoint};
-use std::collections::BTreeMap;
+// use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex};
 use std::thread;
 use bitarray::BitArray;
@@ -19,7 +19,7 @@ use image::imageops::FilterType;
 use std::fmt;
 use console::style;
 use num_cpus;
-use sled::Db;
+// use sled::Db;
 // use rayon::ThreadPool;
 
 // use kiddo::KdTree;
@@ -126,7 +126,7 @@ fn get_num_matches(descs_query: &Vec<BitArray<64>>, descs_search: (&Vec<BitArray
 pub fn calculate_similarities(cfg: &Config, query_desc: &Vec<BitArray<64>>, search_paths: Vec<String>) -> Arc<Mutex<Vec<ImgInfo>>> {
 
     /* create new cache handler struct instance */
-    let mut cache = sled::open(cfg.cache_path.clone()).unwrap();
+    // let mut cache = sled::open(cfg.cache_path.clone()).unwrap();
     
     let info: Arc<Mutex<Vec<ImgInfo>>> = Arc::new(Mutex::new(Vec::new()));
 
@@ -149,7 +149,7 @@ pub fn calculate_similarities(cfg: &Config, query_desc: &Vec<BitArray<64>>, sear
     let chunks = search_paths.chunks(search_paths.len() / num_workers);
     let chunks_owned: Vec<Vec<String>> = chunks.into_iter().map(|x| x.to_owned()).collect();
 
-    let mut batch_update = Arc::new(Mutex::new(sled::Batch::default()));
+    // let mut batch_update = Arc::new(Mutex::new(sled::Batch::default()));
 
     /* multithreaded batch feature extraction */
     for chunk in chunks_owned {
