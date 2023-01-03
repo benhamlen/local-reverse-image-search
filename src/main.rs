@@ -188,13 +188,15 @@ fn main() {
 
     let mut matches = Vec::new();
 
-    println!("----MATCHES----");
+    println!("\n----MATCHES----");
     for entry in info_search.iter() {
         if entry.num_matches as f32 > (mean + config.outlier_stddev_thresh*stddev) {
             println!("{} -> {} matches", style(entry.path.clone()).bold().bright().color256(42), entry.num_matches);
             matches.push(image::open(&entry.path).unwrap());
         }
     }
+    println!("---------------\n");
+
 
     // cache::print_matches(&matches);
     // cache.save();
