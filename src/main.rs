@@ -137,7 +137,6 @@ fn find_image_files(config: &Config, dir_paths: &Vec<String>) -> Arc<Mutex<Vec<S
 
 fn load_config(filepath: &str) -> Result<Config> {
     
-
     /* load config file as json string */
     let data = fs::read_to_string(filepath).expect("Unable to read config file");
 
@@ -145,7 +144,7 @@ fn load_config(filepath: &str) -> Result<Config> {
     serde_json::from_str::<Config>(&data)
 }
 
-#[show_image::main]
+// #[show_image::main]
 fn main() {
 
     /* start a timer */
@@ -159,7 +158,7 @@ fn main() {
     let mut _cache = Cache::new(&config.cache_path);
 
     /* get info for query img */
-    let (_kp_query, desc_query) = extract_single(&config, &config.query_img_path);
+    let (_kp_query, desc_query) = extract_single(config.resize_dimensions.clone(), &config.query_img_path);
 
     /* get all image file paths in search directories */
     println!("{} exploring {} search directories...", style("[2/4]").bold().dim(), &config.search_dirs_paths.len());
