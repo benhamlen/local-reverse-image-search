@@ -2,12 +2,12 @@
     "query_img_path": "media/query/ren.jpeg",
     "search_dirs_paths": [
         "media/axial-mri",
-        "media/aquarium",
         "media/test1",
         "media/test2",
-        "media/test3"
+        "media/test3",
+        "media/thermal-dogs-and-people"
     ],
-    "cache_path": "cache.json",
+    "cache_path": ".cache",
     "outlier_stddev_thresh": 6.0,
     "resize_dimensions": [256, 256],
     "valid_file_extensions": [
