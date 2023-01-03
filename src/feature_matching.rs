@@ -1,11 +1,15 @@
+use crate::cache::{CachedImgInfo, my_hash};
+
+
 use crate::config::Config;
 
 // use std::path::Path;
 // use cv::{feature::akaze::Akaze, KeyPoint, BitArray};
 // use cv::feature::akaze
 use akaze::{Akaze, KeyPoint};
+use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex};
-use std::thread::{self, JoinHandle};
+use std::thread;
 use bitarray::BitArray;
 // use image::dynimage::DynamicImage;
 // use std::path::Path;
@@ -13,11 +17,9 @@ use kdam::{tqdm, BarExt};
 use image::imageops::FilterType;
 // use std::collections::HashMap;
 use std::fmt;
-use console::{style, Emoji};
-use indicatif::{HumanDuration, MultiProgress, ProgressBar, ProgressStyle};
+use console::style;
 use num_cpus;
-use thread_priority::*;
-
+use sled::Db;
 // use rayon::ThreadPool;
 
 // use kiddo::KdTree;
@@ -67,7 +69,7 @@ fn bitarray_to_floatarray(ba: &BitArray<64>) -> Vec<f32> {
 
 fn get_num_matches(descs_query: &Vec<BitArray<64>>, descs_search: (&Vec<BitArray<64>>, &String)) -> u32 {
 
-    let (descs, path) = descs_search;
+    let (descs, _) = descs_search;
 
     // let sty = ProgressStyle::with_template("{bar:40.cyan/blue} {pos:>7}/{len:7} {prefix:.bold.dim} {msg}").unwrap();
     // pb.set_length(descs_query.len() as u64);
@@ -122,34 +124,32 @@ fn get_num_matches(descs_query: &Vec<BitArray<64>>, descs_search: (&Vec<BitArray
 }
 
 pub fn calculate_similarities(cfg: &Config, query_desc: &Vec<BitArray<64>>, search_paths: Vec<String>) -> Arc<Mutex<Vec<ImgInfo>>> {
+
+    /* create new cache handler struct instance */
+    let mut cache = sled::open(cfg.cache_path.clone()).unwrap();
     
     let info: Arc<Mutex<Vec<ImgInfo>>> = Arc::new(Mutex::new(Vec::new()));
+
+    // let cache_arc: Arc<Mutex<&Db>> = Arc::new(Mutex::new(cache));
     
     let mut handles = Vec::new();
     let pb = Arc::new(Mutex::new(tqdm!(total=search_paths.len(), desc="extracting features")));
-
-    // let m = MultiProgress::new();
-    // let pb = ProgressBar::new(search_paths.len() as u64);
 
     /* determine num workers */
     let num_workers = match cfg.num_workers {
         0 => num_cpus::get(),
         _ => cfg.num_workers as usize
     };
-    println!("{} workers", num_workers);
+    println!("using {} workers", num_workers);
 
     // let pool = ThreadPool::new(num_workers);
     // let pool = rayon::ThreadPoolBuilder::new().num_threads(num_workers).build().unwrap();
 
-    let sp = search_paths.to_owned();
+    // let sp = search_paths.to_owned();
+    let chunks = search_paths.chunks(search_paths.len() / num_workers);
+    let chunks_owned: Vec<Vec<String>> = chunks.into_iter().map(|x| x.to_owned()).collect();
 
-    let chunks = sp.chunks(sp.len() / num_workers);
-
-    let mut chunks_owned = Vec::new();
-
-    for chunk in chunks {
-        chunks_owned.push(chunk.to_owned());
-    }
+    let mut batch_update = Arc::new(Mutex::new(sled::Batch::default()));
 
     /* multithreaded batch feature extraction */
     for chunk in chunks_owned {
@@ -158,6 +158,8 @@ pub fn calculate_similarities(cfg: &Config, query_desc: &Vec<BitArray<64>>, sear
         let thispb = pb.clone();
         let this_qdesc = query_desc.clone();
         let resize_dims = cfg.resize_dimensions;
+        // let thiscache = cache_arc.clone();
+        // let thisbatch = batch_update.clone();
 
         // let pb = m.add(ProgressBar::new(0));
 
@@ -183,6 +185,22 @@ pub fn calculate_similarities(cfg: &Config, query_desc: &Vec<BitArray<64>>, sear
                 let mut thisinfo_guard = thisinfo.lock().unwrap();
                 thisinfo_guard.push(ImgInfo { path, keypoints, descriptors, num_matches });
                 drop(thisinfo_guard);
+
+                /* add to cache or update existing entry */
+                // let cache = thiscache.lock().unwrap();
+                // match cache.get(&path) {
+                //     Ok(res) => match res {
+                //         Some(entry) => {
+                //             println!("updating entry for {}", path);
+
+                //         },
+                //         None => {
+                //             // cache.insert(key, value)
+                //         }
+                //     },
+                //     Err(err) => panic!("failed to get path {} because {}", path, err)
+                // }
+                // drop(cache);
             }
         }));
     }

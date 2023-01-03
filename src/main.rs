@@ -10,7 +10,7 @@ use config::Config;
 
 mod feature_matching;
 use feature_matching::*;
-use image::DynamicImage;
+// use image::DynamicImage;
 
 /* 3rd party modules */
 /* ----------------- */
@@ -23,17 +23,17 @@ use std::fs;
 // use std::io::{self, BufRead};
 // use std::ops::Index;
 use std::path::Path;
-use std::ffi::OsStr;
+// use std::ffi::OsStr;
 // use image_hasher::{HasherConfig, ImageHash};
 // use image::imageops::FilterType;
 use std::time::Instant;
 use walkdir::WalkDir;
 // use kdam::tqdm;
-use serde::{Deserialize, Serialize};
+// use serde::{Deserialize, Serialize};
 use serde_json::Result;
-use show_image::{ContextProxy, WindowOptions, ImageView, ImageInfo, create_window, Image};
-use console::{style, Emoji};
-use indicatif::{HumanDuration, MultiProgress, ProgressBar, ProgressStyle};
+// use show_image::{ContextProxy, WindowOptions, ImageView, ImageInfo, create_window, Image};
+use console::style;
+use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use std::sync::{Arc, Mutex};
 use std::thread::{self, JoinHandle};
 // use statrs::distribution::Normal;
@@ -154,9 +154,6 @@ fn main() {
     println!("{} loading config...", style("[1/4]").bold().dim());
     let config = load_config(CONFIG_PATH_DEFAULT).unwrap();
 
-    /* create new cache handler struct instance */
-    let mut _cache = Cache::new(&config.cache_path);
-
     /* get info for query img */
     let (_kp_query, desc_query) = extract_single(config.resize_dimensions.clone(), &config.query_img_path);
 
@@ -169,7 +166,6 @@ fn main() {
                                                         .iter()
                                                         .map(|s| s.clone())
                                                         .collect();
-
 
     /* get info for search imgs */
     println!("{} finding matching points in images...", style("[3/4]").bold().dim());
@@ -188,13 +184,14 @@ fn main() {
 
     let mut matches = Vec::new();
 
-    println!("----MATCHES----");
+    println!("\n----MATCHES----");
     for entry in info_search.iter() {
         if entry.num_matches as f32 > (mean + config.outlier_stddev_thresh*stddev) {
             println!("{} -> {} matches", style(entry.path.clone()).bold().bright().color256(42), entry.num_matches);
             matches.push(image::open(&entry.path).unwrap());
         }
     }
+    println!("---------------\n");
 
     // cache::print_matches(&matches);
     // cache.save();
@@ -213,3 +210,4 @@ fn main() {
 //     let window = create_window("image", Default::default()).unwrap();
 //     window.set_image("match", imgs[0]).unwrap();
 // }
+
