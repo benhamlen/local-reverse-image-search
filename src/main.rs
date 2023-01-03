@@ -14,12 +14,14 @@ use image::DynamicImage;
 
 /* 3rd party modules */
 /* ----------------- */
+use native_dialog::FileDialog;
 // use clap::Parser;
 // use args::ReverseImageSearchArgs;
 // use image::ImageError;
 // use rayon::prelude::IntoParallelRefIterator;
 // use std::fs::File;
 use std::fs;
+use std::env;
 // use std::io::{self, BufRead};
 // use std::ops::Index;
 use std::path::Path;
@@ -144,8 +146,41 @@ fn load_config(filepath: &str) -> Result<Config> {
     serde_json::from_str::<Config>(&data)
 }
 
+fn run_native_dialog() -> String {
+
+    let path = FileDialog::new()
+        .set_location("~/Desktop")
+        .add_filter("PNG Image", &["png"])
+        .add_filter("JPEG Image", &["jpg", "jpeg"])
+        .show_open_single_file()
+        .unwrap();
+
+    let path = match path {
+        Some(path) => path.into_os_string().into_string().unwrap(),
+        None => run_native_dialog()
+    };
+
+    path
+
+}
+
 // #[show_image::main]
 fn main() {
+
+    let args: Vec<String> = env::args().collect();
+
+    let query_img_path: String = match args.get(3) {
+
+        Some(val) => {
+            val.clone()
+        },
+        None => {
+            run_native_dialog()
+        }
+
+    };
+
+    println!("{}", query_img_path);
 
     /* start a timer */
     let timer = Instant::now();
@@ -210,8 +245,8 @@ fn main() {
     // let img_match = Image::BoxDyn(());
 
     // window.set_image("image-001", img_match).unwrap();
-}
+
 // fn show_images(imgs: Vec<DynamicImage>) {
 //     let window = create_window("image", Default::default()).unwrap();
 //     window.set_image("match", imgs[0]).unwrap();
-// }
+}
