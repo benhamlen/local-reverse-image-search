@@ -1196,10 +1196,12 @@ dependencies = [
  "pbr",
  "rayon",
  "serde",
+ "serde_derive",
  "serde_json",
  "show-image",
  "statistical",
  "thread-priority",
+ "toml",
  "walkdir",
 ]
 
