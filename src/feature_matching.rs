@@ -4,6 +4,7 @@ use crate::config::Config;
 // use cv::{feature::akaze::Akaze, KeyPoint, BitArray};
 // use cv::feature::akaze
 use akaze::{Akaze, KeyPoint};
+use serde::{Serialize, Deserialize};
 use std::sync::{Arc, Mutex};
 use std::thread::{self, JoinHandle};
 use bitarray::BitArray;
@@ -13,55 +14,103 @@ use kdam::{tqdm, BarExt};
 use image::imageops::FilterType;
 // use std::collections::HashMap;
 use std::fmt;
-use console::{style, Emoji};
+use console::style;
 use indicatif::{HumanDuration, MultiProgress, ProgressBar, ProgressStyle};
 use num_cpus;
-use thread_priority::*;
-
-// use rayon::ThreadPool;
-
-// use kiddo::KdTree;
-// use kiddo::ErrorKind;
-// use kiddo::distance::squared_euclidean;
-
+use sled::{Db, IVec};
+use bincode;
+use std::convert::From;
 use granne::{self, Builder};
+use serde::{Serializer, Deserializer};
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct ImgInfo {
     pub path: String,
-    pub keypoints: Vec<KeyPoint>,
-    pub descriptors: Vec<BitArray<64>>,
     pub num_matches: u32
 }
 
+// impl From<IVec> for ImgInfo {
+//     fn from(item: i32) -> Self {
+//         Number { value: item }
+//     }
+// }
+
 impl fmt::Display for ImgInfo {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "IMGINFO --> matches: {:>4}, path: {}", self.num_matches, self.path.clone())
+        write!(f, "IMGINFO --> path: {}", self.path)
     }
 }
 
-pub fn extract_single(resize_dims: [u32; 2], path: &String) -> (Vec<KeyPoint>, Vec<BitArray<64>>) {
 
-    /* make new feature extractor */
-    let akaze = Akaze::default();
+#[derive(Debug)]
+pub struct CacheEntry {
+    path: String,
+    keypoints: Vec<KeyPoint>,
+    descriptors: Vec<BitArray<64>>
+}
 
-    /* extract keypoints and descriptors */
-    let [nwidth, nheight] = resize_dims;
-    let filter = FilterType::Nearest;
-    let img = match image::open(&path) {
-        Ok(img) => img.resize(nwidth, nheight, filter),
-        Err(err) => {
-            println!("\n------------------");
-            println!("{}: unable to open {}\n\n{}", style("ERROR").bold().bright().red(), style(path).bold().bright(), err);
-            println!("------------------\n");
-            panic!();
-        }
-    };
-    // let img = image::open(&path).expect(format!("unable to open {}", style(path).bold().bright().red()).as_str()).resize(nwidth, nheight, filter);
-    // let img = image::open(&path).unwrap();
+// impl Serialize for CacheEntry {
+//     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+//     where
+//         S: Serializer
+//     {
+        
+//     }
+// }
 
-    /* return extracted info */
-    akaze.extract(&img)
+// impl Deserialize for CacheEntry {
+//     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+//     where
+//         D: Deserializer<'de>
+//     {
+
+//     }
+// }
+
+
+
+pub fn extract_single(cache: Arc<Mutex<Db>>, resize_dims: [u32; 2], path: &String) -> (Vec<KeyPoint>, Vec<BitArray<64>>) {
+
+    let cache_mguard = cache.lock().unwrap();
+    let res = cache_mguard.get(path);
+    drop(cache_mguard);
+ 
+    match res {
+        Ok(res) => match res {
+            Some(val) => {
+                panic!();
+            },
+            None => {
+
+                /* make new feature extractor */
+                let akaze = Akaze::default();
+            
+                /* extract keypoints and descriptors */
+                let [nwidth, nheight] = resize_dims;
+                let filter = FilterType::Nearest;
+                let img = match image::open(&path) {
+                    Ok(img) => img.resize(nwidth, nheight, filter),
+                    Err(err) => {
+                        println!("\n------------------");
+                        println!("{}: unable to open {}\n\n{}", style("ERROR").bold().bright().red(), style(path).bold().bright(), err);
+                        println!("------------------\n");
+                        panic!();
+                    }
+                };
+            
+                /* return extracted info */
+                let (keypoints, descriptors) = akaze.extract(&img);
+
+                /* add to database */
+
+                // let _ = cache.insert(path, (keypoints, descriptors)).unwrap().unwrap();
+
+                /* return */
+                (keypoints, descriptors)
+            }
+        },
+        Err(err) => panic!("error with database")
+    }
 }
 
 fn bitarray_to_floatarray(ba: &BitArray<64>) -> Vec<f32> {
@@ -74,7 +123,7 @@ fn bitarray_to_floatarray(ba: &BitArray<64>) -> Vec<f32> {
     output
 }
 
-fn get_num_matches(descs_query: &Vec<BitArray<64>>, descs_search: (&Vec<BitArray<64>>, &String)) -> u32 {
+fn get_num_matches(ratio_test_ratio: f32, descs_query: &Vec<BitArray<64>>, descs_search: (&Vec<BitArray<64>>, &String)) -> u32 {
 
     let (descs, path) = descs_search;
 
@@ -118,7 +167,7 @@ fn get_num_matches(descs_query: &Vec<BitArray<64>>, descs_search: (&Vec<BitArray
         let res = index.search(&granne::angular::Vector::from(qvecf32), 200, 10);
 
         /* do ratio test */
-        if res.len() > 1 && res[0].1 < 0.65 * res[1].1 {
+        if res.len() > 1 && res[0].1 <  ratio_test_ratio * res[1].1 {
             num_matches += 1;
         }
 
@@ -130,7 +179,7 @@ fn get_num_matches(descs_query: &Vec<BitArray<64>>, descs_search: (&Vec<BitArray
     num_matches
 }
 
-pub fn calculate_similarities(cfg: &Config, query_desc: &Vec<BitArray<64>>, search_paths: Vec<String>) -> Arc<Mutex<Vec<ImgInfo>>> {
+pub fn calculate_similarities(cache: Arc<Mutex<Db>>, cfg: &Config, query_desc: &Vec<BitArray<64>>, search_paths: Vec<String>) -> Arc<Mutex<Vec<ImgInfo>>> {
     
     let info: Arc<Mutex<Vec<ImgInfo>>> = Arc::new(Mutex::new(Vec::new()));
     
@@ -160,6 +209,8 @@ pub fn calculate_similarities(cfg: &Config, query_desc: &Vec<BitArray<64>>, sear
         chunks_owned.push(chunk.to_owned());
     }
 
+    let ratio_test_ratio = cfg.ratio_test_ratio;
+
     /* multithreaded batch feature extraction */
     for chunk in chunks_owned {
         // println!("\n\nchunk len: {}", chunk.len());
@@ -167,6 +218,7 @@ pub fn calculate_similarities(cfg: &Config, query_desc: &Vec<BitArray<64>>, sear
         let thispb = pb.clone();
         let this_qdesc = query_desc.clone();
         let resize_dims = cfg.resize_dimensions;
+        let thiscache = cache.clone();
 
         // let pb = m.add(ProgressBar::new(0));
 
@@ -177,10 +229,10 @@ pub fn calculate_similarities(cfg: &Config, query_desc: &Vec<BitArray<64>>, sear
 
             for path in chunk.to_owned() {    
                 /* get keypoints and descriptors for this search image */
-                let (keypoints, descriptors) = extract_single(resize_dims, &path);
+                let (keypoints, descriptors) = extract_single(thiscache.clone(), resize_dims, &path);
     
                 /* calculte similarity to query image (num matches) */
-                let num_matches = get_num_matches(&this_qdesc, (&descriptors, &path));
+                let num_matches = get_num_matches(ratio_test_ratio, &this_qdesc, (&descriptors, &path));
     
                 /* increment progress bar */
                 let mut p = thispb.lock().unwrap();
@@ -190,7 +242,7 @@ pub fn calculate_similarities(cfg: &Config, query_desc: &Vec<BitArray<64>>, sear
     
                 /* add extracted info to output */
                 let mut thisinfo_guard = thisinfo.lock().unwrap();
-                thisinfo_guard.push(ImgInfo { path, keypoints, descriptors, num_matches });
+                thisinfo_guard.push(ImgInfo { path, num_matches });
                 drop(thisinfo_guard);
             }
         }));
