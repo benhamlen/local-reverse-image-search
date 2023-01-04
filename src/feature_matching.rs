@@ -22,7 +22,6 @@ use num_cpus;
 use sled::{Db, IVec};
 use bincode;
 use std::convert::From;
-use granne::{self, Builder};
 use serde::{Serializer, Deserializer};
 use kdtree::KdTree;
 use kdtree::ErrorKind;
