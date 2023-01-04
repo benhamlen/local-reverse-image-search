@@ -24,6 +24,9 @@ use bincode;
 use std::convert::From;
 use granne::{self, Builder};
 use serde::{Serializer, Deserializer};
+use kdtree::KdTree;
+use kdtree::ErrorKind;
+use kdtree::distance::squared_euclidean;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ImgInfo {
@@ -82,9 +85,14 @@ pub fn extract_single(cache: Arc<Mutex<Db>>, resize_dims: [u32; 2], path: &Strin
     }
 }
 
-pub fn bitarray_to_floatarray(ba: &BitArray<64>) -> Vec<f32> {
-    let mut output: Vec<f32> = Vec::new();
+pub fn bitarray_to_floatvec(ba: &BitArray<64>) -> Vec<f32> {
+    
+    // let mut output: [f32; 64];
+    // for (i, element) in ba.iter().enumerate() {
+    //     output[i] = element.clone() as f32;
+    // }
 
+    let mut output = Vec::new();
     for byte in ba.iter() {
         output.push(byte.clone() as f32);
     }
@@ -92,51 +100,70 @@ pub fn bitarray_to_floatarray(ba: &BitArray<64>) -> Vec<f32> {
     output
 }
 
+pub fn floatvec_to_floatarray(fv: &Vec<f32>) -> [f32; 64] {
+
+    let mut desc_array: [f32; 64] = [0 as f32; 64];
+
+    for (bytenum, byte) in fv.iter().enumerate() {
+        desc_array[bytenum] = byte.clone();
+    }
+
+    desc_array
+}
+
+
 fn get_num_matches(ratio_test_ratio: f32, descs_query: &Vec<BitArray<64>>, descs_search: (&Vec<BitArray<64>>, &String)) -> u32 {
 
     let (descs, path) = descs_search;
-
-    // let sty = ProgressStyle::with_template("{bar:40.cyan/blue} {pos:>7}/{len:7} {prefix:.bold.dim} {msg}").unwrap();
-    // pb.set_length(descs_query.len() as u64);
-    // pb.set_style(sty.clone());
-    // pb.set_prefix(format!("{}", path));
     
     /* fit nearest neighbors classifier to query descriptors */
-    // let mut kdtree: KdTree<u8, String, 64> = KdTree::new();
-    let mut tokens = Vec::new();
-    let mut elements = granne::angular::Vectors::new();
+    let mut kdtree = KdTree::new(64);
+
+    for (descnum, desc_ba) in descs.iter().enumerate() {
+
+        let desc_vec: Vec<f32> = bitarray_to_floatvec(desc_ba);
+        let desc_array: [f32; 64] = floatvec_to_floatarray(&desc_vec);
+        let _ = kdtree.add(desc_array, descnum);
+    };
+    // let mut tree = RTree::bulk_load(rtreeelements);
+
+    // let mut tokens = Vec::new();
+    // let mut elements = granne::angular::Vectors::new();
 
     /* add query descriptor points to kdtree */
-    for (i, desc) in descs.iter().enumerate() {
+    // for (i, desc) in descs.iter().enumerate() {
 
-        /* convert from u8 to f32 for search compatibility */
-        let vecf32 = bitarray_to_floatarray(desc);
+    //     /* convert from u8 to f32 for search compatibility */
+    //     let vecf32 = bitarray_to_floatarray(desc);
 
-        /* add to collection */
-        tokens.push(i);
-        elements.push(&granne::angular::Vector::from(vecf32));
-    }
+    //     /* add to collection */
+    //     tokens.push(i);
+    //     elements.push(&granne::angular::Vector::from(Vec::from(vecf32)));
+    //     // tree.insert([i, vecf32]);
+    // }
 
     // building the index
-    let build_config = granne::BuildConfig::default().show_progress(false).max_search(10); // increase this for better results
+    // let build_config = granne::BuildConfig::default().show_progress(false).max_search(10); // increase this for better results
 
-    let mut builder = granne::GranneBuilder::new(build_config, elements);
+    // let mut builder = granne::GranneBuilder::new(build_config, elements);
 
-    builder.build();
+    // builder.build();
 
-    let index = builder.get_index();
+    // let index = builder.get_index();
 
     let mut num_matches: u32 = 0;
 
     for qdesc in descs_query.iter() {
 
         /* convert query descriptor to float array */
-        let qvecf32 = bitarray_to_floatarray(qdesc);
+        let qvec = bitarray_to_floatvec(qdesc);
+        let qarray = floatvec_to_floatarray(&qvec);
 
-        let res = index.search(&granne::angular::Vector::from(qvecf32), 200, 10);
+        // let res = index.search(&granne::angular::Vector::from(Vec::from(qvecf32)), 200, 10);
+        let res = kdtree.nearest(&qarray, 10, &squared_euclidean).unwrap();
 
         /* do ratio test */
-        if res.len() > 1 && res[0].1 <  ratio_test_ratio * res[1].1 {
+        if res.len() > 1 && res[0].0 < ratio_test_ratio * res[1].0  {
             num_matches += 1;
         }
 

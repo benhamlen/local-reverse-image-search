@@ -1,4 +1,4 @@
-use crate::feature_matching::bitarray_to_floatarray;
+use crate::feature_matching::bitarray_to_floatvec;
 
 use serde::{Serialize, Deserialize};
 use serde::{Serializer, Deserializer};
@@ -49,7 +49,7 @@ impl Serialize for CacheEntry {
 
         /* serialize keypoints and descriptors */
         let mykeypoints: Vec<MyKeyPoint> = self.keypoints.iter().map(|x| MyKeyPoint(*x)).collect();
-        let mydescriptors: Vec<Vec<f32>> = self.descriptors.iter().map(|x| bitarray_to_floatarray(x)).collect();
+        let mydescriptors: Vec<Vec<f32>> = Vec::from(self.descriptors.iter().map(|x| bitarray_to_floatvec(x)).collect::<Vec<Vec<f32>>>());
         let _ = state.serialize_field("keypoints", &mykeypoints);
         let _ = state.serialize_field("descriptors", &mydescriptors);
 
