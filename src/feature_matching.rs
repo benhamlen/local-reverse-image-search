@@ -4,7 +4,9 @@ use crate::config::Config;
 // use cv::{feature::akaze::Akaze, KeyPoint, BitArray};
 // use cv::feature::akaze
 use akaze::{Akaze, KeyPoint};
+use serde::ser::SerializeStruct;
 use serde::{Serialize, Deserialize};
+use std::iter::zip;
 use std::sync::{Arc, Mutex};
 use std::thread::{self, JoinHandle};
 use bitarray::BitArray;
@@ -29,44 +31,11 @@ pub struct ImgInfo {
     pub num_matches: u32
 }
 
-// impl From<IVec> for ImgInfo {
-//     fn from(item: i32) -> Self {
-//         Number { value: item }
-//     }
-// }
-
 impl fmt::Display for ImgInfo {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "IMGINFO --> path: {}", self.path)
     }
 }
-
-
-#[derive(Debug)]
-pub struct CacheEntry {
-    path: String,
-    keypoints: Vec<KeyPoint>,
-    descriptors: Vec<BitArray<64>>
-}
-
-// impl Serialize for CacheEntry {
-//     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-//     where
-//         S: Serializer
-//     {
-        
-//     }
-// }
-
-// impl Deserialize for CacheEntry {
-//     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-//     where
-//         D: Deserializer<'de>
-//     {
-
-//     }
-// }
-
 
 
 pub fn extract_single(cache: Arc<Mutex<Db>>, resize_dims: [u32; 2], path: &String) -> (Vec<KeyPoint>, Vec<BitArray<64>>) {
@@ -102,7 +71,7 @@ pub fn extract_single(cache: Arc<Mutex<Db>>, resize_dims: [u32; 2], path: &Strin
                 let (keypoints, descriptors) = akaze.extract(&img);
 
                 /* add to database */
-
+                // let data = 
                 // let _ = cache.insert(path, (keypoints, descriptors)).unwrap().unwrap();
 
                 /* return */
@@ -113,7 +82,7 @@ pub fn extract_single(cache: Arc<Mutex<Db>>, resize_dims: [u32; 2], path: &Strin
     }
 }
 
-fn bitarray_to_floatarray(ba: &BitArray<64>) -> Vec<f32> {
+pub fn bitarray_to_floatarray(ba: &BitArray<64>) -> Vec<f32> {
     let mut output: Vec<f32> = Vec::new();
 
     for byte in ba.iter() {
@@ -256,5 +225,4 @@ pub fn calculate_similarities(cache: Arc<Mutex<Db>>, cfg: &Config, query_desc: &
     // m.clear().unwrap();
 
     info
-
 }

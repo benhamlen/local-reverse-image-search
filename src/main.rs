@@ -3,6 +3,8 @@
 mod args;
 use args::ReverseImageSearchArgs;
 
+mod cache;
+
 mod utils;
 use image::DynamicImage;
 use sled::Db;
