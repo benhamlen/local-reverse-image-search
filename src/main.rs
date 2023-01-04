@@ -1,6 +1,7 @@
 /* my modules */
 /* ---------- */
 mod args;
+use args::ReverseImageSearchArgs;
 
 mod cache;
 use cache::*;
@@ -10,39 +11,25 @@ use config::Config;
 
 mod feature_matching;
 use feature_matching::*;
-use image::DynamicImage;
 
 /* 3rd party modules */
 /* ----------------- */
 use native_dialog::FileDialog;
-// use clap::Parser;
-// use args::ReverseImageSearchArgs;
-// use image::ImageError;
-// use rayon::prelude::IntoParallelRefIterator;
-// use std::fs::File;
+use clap::Parser;
 use std::fs;
 use std::env;
-// use std::io::{self, BufRead};
-// use std::ops::Index;
 use std::path::Path;
-use std::ffi::OsStr;
-// use image_hasher::{HasherConfig, ImageHash};
-// use image::imageops::FilterType;
 use std::time::Instant;
 use walkdir::WalkDir;
-// use kdam::tqdm;
-use serde::{Deserialize, Serialize};
 use serde_json::Result;
-use show_image::{ContextProxy, WindowOptions, ImageView, ImageInfo, create_window, Image};
-use console::{style, Emoji};
-use indicatif::{HumanDuration, MultiProgress, ProgressBar, ProgressStyle};
+use console::style;
+use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use std::sync::{Arc, Mutex};
 use std::thread::{self, JoinHandle};
 // use statrs::distribution::Normal;
 use statistical::{mean, standard_deviation};
 
 const CONFIG_PATH_DEFAULT: &str = "config.json";
-
 
 /// returns true if path leads to image file,
 /// returns false otherwise
@@ -147,25 +134,31 @@ fn load_config(filepath: &str) -> Result<Config> {
 }
 
 fn run_native_dialog() -> String {
+    
+    loop {
+        println!("please choose a file");
 
-    let path = FileDialog::new()
-        .set_location("~/Desktop")
-        .add_filter("PNG Image", &["png"])
-        .add_filter("JPEG Image", &["jpg", "jpeg"])
-        .show_open_single_file()
-        .unwrap();
-
-    let path = match path {
-        Some(path) => path.into_os_string().into_string().unwrap(),
-        None => run_native_dialog()
-    };
-
-    path
-
+        let path = FileDialog::new()
+            .set_location(".")
+            .add_filter("PNG Image", &["png"])
+            .add_filter("JPEG Image", &["jpg", "jpeg"])
+            .add_filter("TIFF Image", &["tif", "tiff"])
+            .show_open_single_file()
+            .unwrap();
+        
+        match path {
+            None => {},
+            Some(path) => return path.into_os_string().into_string().unwrap()
+        }
+    }
 }
 
 // #[show_image::main]
 fn main() {
+
+    /* load config */
+    println!("{} loading config...", style("[1/4]").bold().dim());
+    let config = load_config(CONFIG_PATH_DEFAULT).unwrap();
 
     let args: Vec<String> = env::args().collect();
 
@@ -185,15 +178,12 @@ fn main() {
     /* start a timer */
     let timer = Instant::now();
 
-    /* load config */
-    println!("{} loading config...", style("[1/4]").bold().dim());
-    let config = load_config(CONFIG_PATH_DEFAULT).unwrap();
 
     /* create new cache handler struct instance */
     // let mut _cache = Cache::new(&config.cache_path);
 
     /* get info for query img */
-    let (_kp_query, desc_query) = extract_single(config.resize_dimensions.clone(), &config.query_img_path);
+    let (_kp_query, desc_query) = extract_single(config.resize_dimensions.clone(), &query_img_path);
 
     /* get all image file paths in search directories */
     println!("{} exploring {} search directories...", style("[2/4]").bold().dim(), &config.search_dirs_paths.len());

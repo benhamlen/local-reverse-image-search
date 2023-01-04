@@ -4,6 +4,6 @@ use clap::{
 
 #[derive(Debug, Parser)]
 pub struct ReverseImageSearchArgs {
-    /// path to config file
-    config_path: String
+    /// path to query img file
+    query_img_path: String
 }
