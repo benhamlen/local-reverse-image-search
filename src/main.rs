@@ -16,12 +16,12 @@ use feature_matching::*;
 /* ----------------- */
 use native_dialog::FileDialog;
 use clap::Parser;
+use toml;
 use std::fs;
 use std::env;
 use std::path::Path;
 use std::time::Instant;
 use walkdir::WalkDir;
-use serde_json::Result;
 use console::style;
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use std::sync::{Arc, Mutex};
@@ -29,7 +29,7 @@ use std::thread::{self, JoinHandle};
 // use statrs::distribution::Normal;
 use statistical::{mean, standard_deviation};
 
-const CONFIG_PATH_DEFAULT: &str = "config.json";
+const CONFIG_PATH_DEFAULT: &str = "config.toml";
 
 /// returns true if path leads to image file,
 /// returns false otherwise
@@ -124,13 +124,14 @@ fn find_image_files(config: &Config, dir_paths: &Vec<String>) -> Arc<Mutex<Vec<S
     img_paths
 }
 
-fn load_config(filepath: &str) -> Result<Config> {
+fn load_config(filepath: &str) -> Config {
     
     /* load config file as json string */
     let data = fs::read_to_string(filepath).expect("Unable to read config file");
 
-    /* parse json string into config struct */
-    serde_json::from_str::<Config>(&data)
+    /* parse json string into config struct */ 
+    let decoded: Config = toml::from_str(&data).unwrap();
+    decoded
 }
 
 fn run_native_dialog() -> String {
@@ -158,7 +159,7 @@ fn main() {
 
     /* load config */
     println!("{} loading config...", style("[1/4]").bold().dim());
-    let config = load_config(CONFIG_PATH_DEFAULT).unwrap();
+    let config = load_config(CONFIG_PATH_DEFAULT);
 
     let args: Vec<String> = env::args().collect();
 
