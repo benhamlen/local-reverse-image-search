@@ -48,7 +48,16 @@ pub fn extract_single(resize_dims: [u32; 2], path: &String) -> (Vec<KeyPoint>, V
     /* extract keypoints and descriptors */
     let [nwidth, nheight] = resize_dims;
     let filter = FilterType::Nearest;
-    let img = image::open(&path).unwrap().resize(nwidth, nheight, filter);
+    let img = match image::open(&path) {
+        Ok(img) => img.resize(nwidth, nheight, filter),
+        Err(err) => {
+            println!("\n------------------");
+            println!("{}: unable to open {}\n\n{}", style("ERROR").bold().bright().red(), style(path).bold().bright(), err);
+            println!("------------------\n");
+            panic!();
+        }
+    };
+    // let img = image::open(&path).expect(format!("unable to open {}", style(path).bold().bright().red()).as_str()).resize(nwidth, nheight, filter);
     // let img = image::open(&path).unwrap();
 
     /* return extracted info */
