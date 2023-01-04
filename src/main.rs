@@ -140,9 +140,6 @@ fn run_native_dialog() -> String {
 
         let path = FileDialog::new()
             .set_location(".")
-            .add_filter("PNG Image", &["png"])
-            .add_filter("JPEG Image", &["jpg", "jpeg"])
-            .add_filter("TIFF Image", &["tif", "tiff"])
             .show_open_single_file()
             .unwrap();
         
@@ -160,24 +157,23 @@ fn main() {
     println!("{} loading config...", style("[1/4]").bold().dim());
     let config = load_config(CONFIG_PATH_DEFAULT).unwrap();
 
-    let args: Vec<String> = env::args().collect();
+    /* parse command line args */
+    let args = ReverseImageSearchArgs::parse();
 
-    let query_img_path: String = match args.get(3) {
-
-        Some(val) => {
-            val.clone()
+    /* get query image path */
+    let query_img_path: String = match args.query_img_path {
+        Some(path) => {
+            path.clone()
         },
         None => {
             run_native_dialog()
         }
-
     };
 
     println!("{}", query_img_path);
 
     /* start a timer */
     let timer = Instant::now();
-
 
     /* create new cache handler struct instance */
     // let mut _cache = Cache::new(&config.cache_path);
