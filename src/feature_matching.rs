@@ -237,7 +237,7 @@ pub fn calculate_similarities(cache: Arc<Mutex<Db>>, cfg: &Config, query_desc: &
                 /* increment progress bar */
                 let mut p = thispb.lock().unwrap();
                 p.update(1);
-                p.write(format!("{} -> {} matches", style(path.clone()).bold().blue(), num_matches));
+                p.write(format!("{:>6} matches <- {}", num_matches, style(path.clone()).bold().blue()));
                 drop(p);
     
                 /* add extracted info to output */

@@ -81,10 +81,16 @@ fn main() {
 
     println!("\n----MATCHES----");
     for entry in info_search.iter() {
-        let z = (entry.num_matches as f32 - mean) / stddev;
+        let z: f32 = (entry.num_matches as f32 - mean) / stddev;
         // if entry.num_matches as f32 > (mean + stddev*config.outlier_stddev_thresh) {
         if z > config.outlier_zscore_thresh {
-            println!("{} -> {} matches, z = {}", style(entry.path.clone()).bold().bright().color256(42), entry.num_matches, z);
+            println!("{} -> {}: {:.2}, {}: {}",
+                                            style(entry.path.clone()).bold().bright().color256(42),
+                                            style("z-score").bold().bright(),
+                                            z,
+                                            style("matches").bold().bright(),
+                                            entry.num_matches);
+
             matches.push((z, image::open(&entry.path).unwrap()));
         }
     }
