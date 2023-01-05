@@ -96,19 +96,3 @@ pub fn load_config(filepath: String) -> Config {
     let decoded: Config = toml::from_str(&data).unwrap();
     decoded
 }
-
-pub fn run_file_dialog() -> String {
-    
-    loop {
-        println!("please choose a file");
-
-        let path = FileDialog::new()
-            .set_directory(".")
-            .pick_file();
-        
-        match path {
-            None => {},
-            Some(path) => return path.into_os_string().into_string().unwrap()
-        }
-    }
-}

@@ -11,8 +11,7 @@ use rfd::FileDialog;
 use sled::Db;
 use utils::{
     load_config,
-    find_image_files,
-    run_file_dialog
+    find_image_files
 };
 
 mod config;
