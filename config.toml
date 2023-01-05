@@ -5,7 +5,8 @@ search_dirs_paths = [
 	"media/test1",
 	"media/test2",
 	"media/test3",
-	"media/thermal-dogs-and-people"
+	"media/thermal-dogs-and-people",
+	"media/corrupted"
 ]
 
 # performance

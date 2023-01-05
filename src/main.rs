@@ -6,12 +6,13 @@ use args::ReverseImageSearchArgs;
 mod cache;
 
 mod utils;
-use image::DynamicImage;
+use rfd::FileDialog;
+// use image::DynamicImage;
 use sled::Db;
 use utils::{
     load_config,
     find_image_files,
-    run_native_dialog
+    run_file_dialog
 };
 
 mod config;
@@ -28,6 +29,7 @@ use console::style;
 // use statrs::distribution::Normal;
 use statistical::{mean, standard_deviation};
 use std::sync::{Arc, Mutex};
+use unicode_segmentation::UnicodeSegmentation;
 
 // #[show_image::main]
 fn main() {
@@ -36,7 +38,7 @@ fn main() {
     let args = ReverseImageSearchArgs::parse();
 
     /* load config */
-    println!("{} loading config...", style("[1/4]").bold().dim());
+    println!("\n{} loading config...", style("[1/3]").bold().green());
     let config = load_config(args.config_file_path);
 
     /* get query image path */
@@ -45,7 +47,15 @@ fn main() {
             path.clone()
         },
         None => {
-            run_native_dialog()
+            println!("please choose a file, click cancel to quit");
+
+            match FileDialog::new().set_directory(".").pick_file() {
+                Some(path) => path.to_string_lossy().to_string(),
+                None => {
+                    println!("no file selected, quitting");
+                    return
+                }
+            }
         }
     };
 
@@ -61,12 +71,12 @@ fn main() {
     let (_, desc_query) = extract_single(cache.clone(),config.resize_dimensions.clone(), &query_img_path).unwrap();
 
     /* get all image file paths in search directories */
-    println!("{} exploring {} search directories...", style("[2/4]").bold().dim(), &config.search_dirs_paths.len());
+    println!("\n{} exploring {} search directories...", style("[2/3]").bold().green(), &config.search_dirs_paths.len());
     let img_paths = find_image_files(&config, &config.search_dirs_paths);
 
     /* get info for search imgs */
-    println!("{} finding matching points in images...", style("[3/4]").bold().dim());
-    let info_search_arc = calculate_similarities(cache.clone(), &config, &desc_query, img_paths);
+    println!("\n\n{} finding matching points in images...", style("[3/3]").bold().green());
+    let (info_search_arc, failed_paths) = calculate_similarities(cache.clone(), &config, &desc_query, img_paths);
 
     let mut info_search = info_search_arc.lock().unwrap();
 
@@ -79,34 +89,39 @@ fn main() {
     let stddev = standard_deviation(&nmatches_list, Some(mean));
     println!("num matches --> mean: {}, std dev: {}", mean, stddev);
 
-    let mut matches: Vec<(f32, DynamicImage)> = Vec::new();
-
-    println!("\n----MATCHES----");
+    /* filter matches from list */
+    let mut matches: Vec<(f32, &ImgInfo)> = Vec::new();
     for entry in info_search.iter() {
         let z: f32 = (entry.num_matches as f32 - mean) / stddev;
-        // if entry.num_matches as f32 > (mean + stddev*config.outlier_stddev_thresh) {
-        if z > config.outlier_zscore_thresh {
-            println!("{} -> {}: {:.2}, {}: {}",
-                                            style(entry.path.clone()).bold().bright().color256(42),
-                                            style("z-score").bold().bright(),
-                                            z,
-                                            style("matches").bold().bright(),
-                                            entry.num_matches);
-
-            matches.push((z, image::open(&entry.path).unwrap()));
-        }
+            if z > config.outlier_zscore_thresh {
+                matches.push((z, entry));
+            }
     }
-    println!("---------------\n");
+
+    /* print failed paths */
+    let s_or_not: &str = match failed_paths.len() { 1 => "", _ => "s" };
+    let topstr = format!("----{} image{} failed to open ----", style(failed_paths.len()).bold(), s_or_not); 
+    println!("\n{}", topstr);
+    for fp in failed_paths {
+        println!("{}", style(fp).bold().red());
+    }
+    println!("{}", "-".repeat(topstr.graphemes(true).count()));
+    
+    /* print matches */
+    let s_or_not: &str = match matches.len() { 1 => "", _ => "ES" };
+    let topstr = format!("----{} MATCH{}----", style(matches.len()).bold(), s_or_not);
+    println!("\n{}", topstr);
+    for m in matches.iter() {
+
+        let (z, info) = m;
+        
+        println!("{} -> {}: {:.2}, {}: {}",
+                                    style(info.path.clone()).bold().bright().color256(42),
+                                    style("z-score").bold().bright(), z,
+                                    style("matches").bold().bright(), info.num_matches);
+
+    }
+    println!("{}\n", "-".repeat(topstr.graphemes(true).count()));
 
     println!("done in {:?}", timer.elapsed());
-
-    // show_images(matches);
-
-    // let img_match = Image::BoxDyn(());
-
-    // window.set_image("image-001", img_match).unwrap();
-
-// fn show_images(imgs: Vec<DynamicImage>) {
-//     let window = create_window("image", Default::default()).unwrap();
-//     window.set_image("match", imgs[0]).unwrap();
 }

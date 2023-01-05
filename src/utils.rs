@@ -6,7 +6,8 @@ use std::thread::{self, JoinHandle};
 use std::path::Path;
 use walkdir::WalkDir;
 use std::fs;
-use  native_dialog::FileDialog;
+// use  native_dialog::FileDialog;
+use rfd::FileDialog;
 
 /// returns true if path leads to image file,
 /// returns false otherwise
@@ -77,6 +78,7 @@ pub fn find_image_files(config: &Config, dir_paths: &Vec<String>) -> Vec<String>
         let _ = handle.join();
     }
 
+    /* "unpack" strings from arc mutex */
     let out = img_paths.lock().unwrap()
                         .iter()
                         .map(|s| s.clone())
@@ -95,15 +97,14 @@ pub fn load_config(filepath: String) -> Config {
     decoded
 }
 
-pub fn run_native_dialog() -> String {
+pub fn run_file_dialog() -> String {
     
     loop {
         println!("please choose a file");
 
         let path = FileDialog::new()
-            .set_location(".")
-            .show_open_single_file()
-            .unwrap();
+            .set_directory(".")
+            .pick_file();
         
         match path {
             None => {},
