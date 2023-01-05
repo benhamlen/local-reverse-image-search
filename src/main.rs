@@ -67,7 +67,13 @@ fn main() {
     let cache: Arc<Mutex<Db>> = Arc::new(Mutex::new(sled::open(&config.cache_path).unwrap()));
 
     /* get info for query img */
-    let (_, desc_query) = extract_single(cache.clone(),config.resize_dimensions.clone(), &query_img_path).unwrap();
+    let (_, desc_query) = match extract_single(cache.clone(),config.resize_dimensions.clone(), &query_img_path) {
+        Some((kp_query, desc_query)) => (kp_query, desc_query),
+        None => {
+            println!("{} -- unable to open file: {}", style("ERROR").bold().bright().red(), query_img_path);
+            return
+        }
+    };
 
     /* get all image file paths in search directories */
     println!("\n{} exploring {} search directories...", style("[2/3]").bold().green(), &config.search_dirs_paths.len());
