@@ -40,19 +40,21 @@ impl fmt::Display for ImgInfo {
 }
 
 
-pub fn extract_single(cache: Arc<Mutex<Db>>, resize_dims: [u32; 2], path: &String) -> (Vec<KeyPoint>, Vec<BitArray<64>>) {
+pub fn extract_single(cache: Arc<Mutex<Db>>, resize_dims: [u32; 2], path: &String) -> Option<(Vec<KeyPoint>, Vec<BitArray<64>>)> {
 
     let cache_mguard = cache.lock().unwrap();
     let res = cache_mguard.get(path);
     drop(cache_mguard);
  
     match res {
+
         Ok(res) => match res {
+
             Some(val) => {
                 panic!();
             },
-            None => {
 
+            None => {
                 /* make new feature extractor */
                 let akaze = Akaze::default();
             
@@ -60,12 +62,14 @@ pub fn extract_single(cache: Arc<Mutex<Db>>, resize_dims: [u32; 2], path: &Strin
                 let [nwidth, nheight] = resize_dims;
                 let filter = FilterType::Nearest;
                 let img = match image::open(&path) {
+
                     Ok(img) => img.resize(nwidth, nheight, filter),
+
                     Err(err) => {
-                        println!("\n------------------");
-                        println!("{}: unable to open {}\n\n{}", style("ERROR").bold().bright().red(), style(path).bold().bright(), err);
-                        println!("------------------\n");
-                        panic!();
+                        // println!("\n------------------");
+                        // println!("{}: unable to open {}\n\n{}", style("ERROR").bold().bright().red(), style(path).bold().bright(), err);
+                        // println!("------------------\n");
+                        return None
                     }
                 };
             
@@ -77,7 +81,7 @@ pub fn extract_single(cache: Arc<Mutex<Db>>, resize_dims: [u32; 2], path: &Strin
                 // let _ = cache.insert(path, (keypoints, descriptors)).unwrap().unwrap();
 
                 /* return */
-                (keypoints, descriptors)
+                Some((keypoints, descriptors))
             }
         },
         Err(err) => panic!("error with database")
@@ -222,23 +226,35 @@ pub fn calculate_similarities(cache: Arc<Mutex<Db>>, cfg: &Config, query_desc: &
 
             // set_current_thread_priority(ThreadPriority::Max).unwrap();
 
-            for path in chunk.to_owned() {    
+            for path in chunk.to_owned() {   
+                
+                let mut msg: String = String::new();
+                
                 /* get keypoints and descriptors for this search image */
-                let (keypoints, descriptors) = extract_single(thiscache.clone(), resize_dims, &path);
-    
-                /* calculte similarity to query image (num matches) */
-                let num_matches = get_num_matches(ratio_test_ratio, &this_qdesc, (&descriptors, &path));
-    
-                /* increment progress bar */
+                match extract_single(thiscache.clone(), resize_dims, &path) {
+
+                    Some((keypoints, descriptors)) => {
+
+                        /* calculte similarity to query image (num matches) */
+                        let num_matches = get_num_matches(ratio_test_ratio, &this_qdesc, (&descriptors, &path));
+            
+                        msg = format!("{:>6} matches <- {}", num_matches, style(path.clone()).bold().blue());
+            
+                        /* add extracted info to output */
+                        let mut thisinfo_guard = thisinfo.lock().unwrap();
+                        thisinfo_guard.push(ImgInfo { path, num_matches });
+                        drop(thisinfo_guard);
+                    },
+
+                    None => {
+                        msg = format!("{}: unable to open {}, skipping", style("ERROR").bold().bright().red(), style(path.clone()).bold());
+                    }
+                }
+
                 let mut p = thispb.lock().unwrap();
                 p.update(1);
-                p.write(format!("{:>6} matches <- {}", num_matches, style(path.clone()).bold().blue()));
+                p.write(msg);
                 drop(p);
-    
-                /* add extracted info to output */
-                let mut thisinfo_guard = thisinfo.lock().unwrap();
-                thisinfo_guard.push(ImgInfo { path, num_matches });
-                drop(thisinfo_guard);
             }
         }));
     }
