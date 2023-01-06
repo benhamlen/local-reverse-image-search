@@ -16,12 +16,18 @@ No dependencies outside of those specified in the Cargo.toml file should be need
 ## Installation
 
 1. Install Rust [(guide here)](https://www.rust-lang.org/tools/install)
+2. Clone this repository ```git clone https://github.com/benhamlen/local-reverse-image-search.git```
 
 ## Configuration
 
 ```config.toml``` is the main configuration document for this program.
 
+The most important configuration is the search directory paths.
+
 ## Usage
+
+1. Run the program with ```cargo run --release```
+2. Select a query image
 
 Show users how to use the software.
 Be specific.
