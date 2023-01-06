@@ -2,7 +2,7 @@
 
 **Description**:  This program was originally created to help my dad determine whether a filmstock image had alread been scanned. It detects Akaze keypoints and their descriptors in images then finds matches between those in some query image and those in a library of search images. Images with a significantly-higher number of matched points are considered overall matches for the query image. 
 
-But I also view it as a fun sandbox to experiment with Rust and new features. Feel free to submit a 
+But I also view it as a fun sandbox to experiment with Rust and new features. Feel free to submit a pull request for a new feature you think would be cool. Extending the program's functionality to other file types is one that has been brainstormed a bit already.
 
 
 **Screenshot**: If the software has visual components, place a screenshot after the description; e.g.,
