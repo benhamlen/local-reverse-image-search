@@ -8,6 +8,7 @@ use walkdir::WalkDir;
 use std::fs;
 // use  native_dialog::FileDialog;
 use rfd::FileDialog;
+use console::style;
 
 /// returns true if path leads to image file,
 /// returns false otherwise
@@ -90,9 +91,16 @@ pub fn find_image_files(config: &Config, dir_paths: &Vec<String>) -> Vec<String>
 pub fn load_config(filepath: String) -> Config {
     
     /* load config file as json string */
-    let data = fs::read_to_string(filepath).expect("Unable to read config file");
+    let data = fs::read_to_string(&filepath).expect("Unable to read config file");
 
     /* parse json string into config struct */ 
-    let decoded: Config = toml::from_str(&data).unwrap();
-    decoded
+    match toml::from_str(&data) {
+        Ok(cfg) => cfg,
+        Err(err) => {
+            println!("----------------------");
+            println!("{} -- something went wrong opening the config file ({}).\nerror: {}", style("ERROR").bold().bright().red(), filepath, err);
+            println!("----------------------");
+            panic!();
+        }
+    }
 }
