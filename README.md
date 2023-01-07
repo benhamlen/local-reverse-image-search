@@ -2,9 +2,13 @@
 
 ![](LRIS_demo.gif)
 
-**Description**:  This program was originally created to help my dad determine whether a filmstock image had alread been scanned. It detects Akaze keypoints and their descriptors in images then finds matches between those in some query image and those in a library of search images. Images with a significantly-higher number of matched points are considered overall matches for the query image. 
+**Description**: This program searches a set of directories for instances of some query image. Akaze keypoints are detected in each image using the AKAZE CRATE (ADD LINK), nearest neighbors are found using the KDTree crate (ADD LINK), matches are calculated using the ratio test (ADD LINK), and finally images with an "outlier" number of matches are reported to the user as matches.
 
-But I also view it as a fun sandbox to experiment with Rust and new features. Feel free to submit a pull request for a new feature you think would be cool. Extending the program's functionality to other file types is one that has been brainstormed a bit already.
+I also view this as a fun playground for Rust stuff, though, so feel free to add any feature you think could be cool!
+
+TODO:
+- Finish custom serialization/deserialization
+- Finish caching implementation
 
 ## Dependencies
 
@@ -16,29 +20,21 @@ No dependencies outside of those specified in the Cargo.toml file should be need
 2. Clone this repository ```git clone https://github.com/benhamlen/local-reverse-image-search.git```
 
 ## Configuration
-
 ```config.toml``` is the main configuration document for this program.
 
 The most important configuration is the search directory paths.
 
 ## Usage
-
 1. Run the program with ```cargo run --release```
 2. Select a query image
 
-Show users how to use the software.
-Be specific.
-Use appropriate formatting when showing code snippets.
-
 ## How to test the software
 
-If the software includes automated tests, detail how to run those tests.
+No tests for now, perhaps will add some in the future. Was thinking about characterizing the program's performance by randomly selecting many query images and seeing what images it has trouble with, what images it detects well, etc.
 
 ## Known issues
 
-Document any known significant shortcomings with the software.
-
-**Example**
+None for now, certainly some exist.
 
 If you have questions, concerns, bug reports, etc, please file an issue in this repository's Issue Tracker.
 
@@ -57,7 +53,6 @@ General instructions on _how_ to contribute should be stated with a link to [CON
 1. [TERMS](TERMS.md)
 2. [LICENSE](LICENSE)
 3. [CFPB Source Code Policy](https://github.com/cfpb/source-code-policy/)
-
 
 ----
 
