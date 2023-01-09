@@ -1,6 +1,6 @@
 # Local Reverse Image Search
 
-![](LRIS_demo.gif)
+![](LRIS_demo_compressed.gif)
 
 **Description**: This program searches a set of directories for instances of some query image. Akaze keypoints are detected in each image using the AKAZE CRATE (ADD LINK), nearest neighbors are found using the KDTree crate (ADD LINK), matches are calculated using the ratio test (ADD LINK), and finally images with an "outlier" number of matches are reported to the user as matches.
 
