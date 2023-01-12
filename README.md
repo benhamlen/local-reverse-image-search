@@ -39,12 +39,9 @@ important pieces, etc.
 General instructions on _how_ to contribute should be stated with a link to [CONTRIBUTING](CONTRIBUTING.md).
 
 
-----
-
 ## Open source licensing info
 - [LICENSE](LICENSE)
 
-----
 
 ## Credits and references
 This project was inspired by work from the University of Minnesota's CSCI 5561 Computer Vision course, taught by Junaed Sattar. The concepts implemented here in Rust are reflected in Python in the course's homework assignments. Thanks to him for teaching the concepts so well!
