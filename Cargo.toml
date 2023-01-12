@@ -6,43 +6,26 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-serde_derive = "*"
+serde = {version = "1.0.152", features = ["derive"]}
+serde_derive = "1.0.152"
 toml = "0.5.10"
 akaze = "0.7.0"
 clap = { version = "4.0.32", features = ["derive"] }
 image = "0.23.14"
 bitarray = "0.2.6"
 kdam = "0.3.0"
-serde = {version = "1.0.152", features = ["derive"]}
-serde_json = "1.0.91"
 walkdir = "2"
-image_hasher = "1.1.2"
-show-image = {version = "0.13.1", features = ["image"]}
 pbr = "1.0.4"
 indicatif = "0.17.2"
 console = "0.15.3"
 statistical = "1.0.0"
 num_cpus = "1.15.0"
-rayon = "1.6.1"
-thread-priority = "0.10.0"
 sled = "0.34.7"
 bincode = "1.3.3"
 kdtree = "0.7.0"
 unicode-segmentation = "1.10.0"
 rfd = "0.10.0"
 
-
-# native-dialog = "0.6.3"
-# granne = "0.5.2"
-# rstar = "0.9.3"
-# statrs = "0.16.0"
-# threadpool = "1.8.1"
-# show-image = "0.13.1"
-# plotters = "0.3.4"
-# kiddo = "0.2.4"
-# tui = "0.19.0"
-# img_hash = "3.2.0"
-# image = "0.23.14"
-# image = "0.24.5"
-# cv = "0.6.0"
-# image = "0.24.5"
+# unused but possibly used in the future
+# show-image = {version = "0.13.1", features = ["image"]}
+# image_hasher = "1.1.2"

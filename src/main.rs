@@ -109,7 +109,8 @@ fn main() {
     for fp in failed_paths {
         println!("{}", style(fp).bold().red());
     }
-    println!("{}", "-".repeat(topstr.graphemes(true).count()));
+    // println!("----");
+    println!("{}", "-".repeat(topstr.graphemes(true).count()-8));
     
     /* print matches */
     let s_or_not: &str = match matches.len() { 1 => "", _ => "ES" };
@@ -125,7 +126,8 @@ fn main() {
                                     style("matches").bold().bright(), info.num_matches);
 
     }
-    println!("{}\n", "-".repeat(topstr.graphemes(true).count()));
+    // println!("----");
+    println!("{}", "-".repeat(topstr.graphemes(true).count()-8));
 
-    println!("done in {:?}", timer.elapsed());
+    println!("\ndone in {:?}", timer.elapsed());
 }
