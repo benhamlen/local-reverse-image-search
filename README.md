@@ -8,37 +8,30 @@ Extracted keypoints and descriptors are cached on disk using the [sled crate](ht
 I also view this as a fun playground for Rust stuff, though, so feel free to add any feature you think could be cool!
 
 ## Dependencies
-----
 All dependencies should be automagically downloaded by Cargo while building.
 
 ## Installation
-----
 1. Install Rust [(guide here)](https://www.rust-lang.org/tools/install)
 2. Clone this repository ```git clone https://github.com/benhamlen/local-reverse-image-search.git```
 
 ## Configuration
-----
 ```config.toml``` is the main configuration document for this program.
 
 The most important configuration is the search directory paths.
 
 ## Usage
-----
 1. Run the program with ```cargo run --release```
 2. Select a query image
 
 ## How to test the software
-----
 No tests for now, perhaps will add some in the future. Was thinking about characterizing the program's performance by randomly selecting many query images and seeing what images it has trouble with, what images it detects well, etc.
 
 ## Known issues
-----
 None for now, certainly some exist.
 
 If you have questions, concerns, bug reports, etc, please file an issue in this repository's Issue Tracker.
 
 ## Getting involved
-----
 This section should detail why people should get involved and describe key areas you are
 currently focusing on; e.g., trying to get feedback on features, fixing certain bugs, building
 important pieces, etc.
