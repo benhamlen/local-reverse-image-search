@@ -1,5 +1,5 @@
 # Local Reverse Image Search
-![](LRIS_demo_compressed.gif)
+![](LRIS_demo_withcaching_compressed.gif)
 
 **Description**: This program searches a set of directories for instances of some query image. Akaze keypoints are detected in each image using the [akaze crate](https://crates.io/crates/akaze), nearest neighbors are found using the [kdtree crate](https://crates.io/crates/kdtree), "matching" keypoints are determined using Lowe's ratio test [(described in section 7.1 of this paper)](https://www.cs.ubc.ca/~lowe/papers/ijcv04.pdf), and finally images with an "outlier" number of keypoint matches (currently determined by [z-score](https://en.wikipedia.org/wiki/Standard_score)) are reported to the user as overall matches to the query image.
 

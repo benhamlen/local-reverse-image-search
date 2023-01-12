@@ -236,12 +236,13 @@ pub fn calculate_similarities(cache: Arc<Mutex<Db>>, cfg: &Config, query_desc: &
                         /* calculte similarity to query image (num matches) */
                         let num_matches = get_num_matches(ratio_test_ratio, &this_qdesc, (&descriptors, &path));
                         if print_results {
+
                             let path_styled = style(path.clone()).bold();
-                            let path_styled = match cached {
-                                true => path_styled.blue(),
-                                false => path_styled.cyan()
+                            let (path_styled, cached_flag) = match cached {
+                                true => (path_styled.blue(), style("(cached)").bold().blue()),
+                                false => (path_styled.cyan(), style("").bold().dim())
                             };
-                            _msg = format!("{:>6} matches <- {}", num_matches, path_styled);
+                            _msg = format!("{:>6} matches <- {} {}", num_matches, path_styled, cached_flag);
                         }
             
                         /* add extracted info to output */
