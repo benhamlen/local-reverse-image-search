@@ -46,7 +46,7 @@ pub fn find_image_files(config: &Config, dir_paths: &Vec<String>) -> Vec<String>
 
         let this_img_paths = img_paths.clone();
         let pb = m.add(ProgressBar::new_spinner());
-        pb.set_style(ProgressStyle::with_template("{prefix:.bold.dim} {spinner} {msg:20}")
+        pb.set_style(ProgressStyle::with_template("{msg:24} {spinner} {prefix:.bold.dim}")
                                         .unwrap()
                                         .tick_chars("⠁⠂⠄⡀⢀⠠⠐⠈ "));
         pb.set_prefix(format!("{}", path));
@@ -61,7 +61,7 @@ pub fn find_image_files(config: &Config, dir_paths: &Vec<String>) -> Vec<String>
                 match entry {
                     Ok(ref direntry) => if is_valid_file(valid_extensions.clone(), direntry.path()){
                         // println!("{}", direntry.path().display());
-                        pb.set_message(format!("{}", direntry.path().to_string_lossy()));
+                        // pb.set_message(format!("{}", direntry.path().to_string_lossy()));
                         pb.inc(1);
                         this_img_paths.lock().unwrap().push(direntry.path().to_string_lossy().to_string());
                         num_files += 1;

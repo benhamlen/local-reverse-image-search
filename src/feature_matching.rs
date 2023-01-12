@@ -34,7 +34,7 @@ impl fmt::Display for ImgInfo {
 }
 
 
-pub fn extract_single(cache: Arc<Mutex<Db>>, resize_dims: [u32; 2], path: &String) -> Option<(Vec<KeyPoint>, Vec<BitArray<64>>)> {
+pub fn extract_single(cache: Arc<Mutex<Db>>, resize_dims: [u32; 2], path: &String) -> Option<(Vec<KeyPoint>, Vec<BitArray<64>>, bool)> {
 
     let cache_mguard = cache.lock().unwrap();
     let res = cache_mguard.get(path);
@@ -59,7 +59,7 @@ pub fn extract_single(cache: Arc<Mutex<Db>>, resize_dims: [u32; 2], path: &Strin
                     
                     BitArray::new(arr)
                 }).collect();
-                Some((mykeypoints, mydescriptors))
+                Some((mykeypoints, mydescriptors, true))
             },
 
             None => {
@@ -96,7 +96,7 @@ pub fn extract_single(cache: Arc<Mutex<Db>>, resize_dims: [u32; 2], path: &Strin
                 // println!("{}: {}", style("added to cache ").bold().green(), path.clone());
 
                 /* return */
-                Some((keypoints, descriptors))
+                Some((keypoints, descriptors, false))
             }
         },
         Err(err) => panic!("error with database: {}", err)
@@ -176,21 +176,32 @@ pub fn calculate_similarities(cache: Arc<Mutex<Db>>, cfg: &Config, query_desc: &
     // let pb = ProgressBar::new(search_paths.len() as u64);
 
     /* determine num workers */
-    let num_workers = match cfg.num_workers {
+    let num_workers: usize = match cfg.num_workers {
         0 => num_cpus::get(),
         _ => cfg.num_workers as usize
     };
     println!("{} workers", num_workers);
 
-    // let pool = ThreadPool::new(num_workers);
-    // let pool = rayon::ThreadPoolBuilder::new().num_threads(num_workers).build().unwrap();
+    // let sp = search_paths.to_owned();
+    // let chunks = sp.chunks(sp.len() / num_workers);
+    // let mut chunks_owned = Vec::new();
+    
+    // for chunk in chunks {
+    //     chunks_owned.push(chunk.to_owned());
+    // }
+    let mut chunks_owned: Vec<Vec<String>> = Vec::new();
 
-    let sp = search_paths.to_owned();
-    let chunks = sp.chunks(sp.len() / num_workers);
-    let mut chunks_owned = Vec::new();
+    for (i, sp) in search_paths.iter().enumerate() {
+        
+        let ind = match i >= num_workers {
+            true => i%num_workers,
+            false => {
+                chunks_owned.push(Vec::new());
+                i
+            }
+        };
 
-    for chunk in chunks {
-        chunks_owned.push(chunk.to_owned());
+        chunks_owned[ind].push(sp.clone())
     }
 
     let ratio_test_ratio = cfg.ratio_test_ratio;
@@ -204,6 +215,7 @@ pub fn calculate_similarities(cache: Arc<Mutex<Db>>, cfg: &Config, query_desc: &
         let resize_dims = cfg.resize_dimensions;
         let thiscache = cache.clone();
         let thisfailedpaths = failed_paths_arc.clone();
+        let print_results = cfg.print_live_analysis_results;
 
         // let pb = m.add(ProgressBar::new(0));
 
@@ -219,12 +231,18 @@ pub fn calculate_similarities(cache: Arc<Mutex<Db>>, cfg: &Config, query_desc: &
                 /* get keypoints and descriptors for this search image */
                 match extract_single(thiscache.clone(), resize_dims, &path) {
 
-                    Some((_, descriptors)) => {
+                    Some((_, descriptors, cached)) => {
 
                         /* calculte similarity to query image (num matches) */
                         let num_matches = get_num_matches(ratio_test_ratio, &this_qdesc, (&descriptors, &path));
-            
-                        _msg = format!("{:>6} matches <- {}", num_matches, style(path.clone()).bold().blue());
+                        if print_results {
+                            let path_styled = style(path.clone()).bold();
+                            let path_styled = match cached {
+                                true => path_styled.blue(),
+                                false => path_styled.cyan()
+                            };
+                            _msg = format!("{:>6} matches <- {}", num_matches, path_styled);
+                        }
             
                         /* add extracted info to output */
                         let mut thisinfo_guard = thisinfo.lock().unwrap();
@@ -233,7 +251,9 @@ pub fn calculate_similarities(cache: Arc<Mutex<Db>>, cfg: &Config, query_desc: &
                     },
 
                     None => {
-                        _msg = format!("{}: unable to open {}, skipping", style("ERROR").bold().bright().red(), style(path.clone()).bold());
+                        if print_results {
+                            _msg = format!("{}: unable to open {}, skipping", style("ERROR").bold().bright().red(), style(path.clone()).bold());
+                        }
                         let mut failed_paths = thisfailedpaths.lock().unwrap();
                         failed_paths.push(path.clone());
                     }
@@ -241,7 +261,9 @@ pub fn calculate_similarities(cache: Arc<Mutex<Db>>, cfg: &Config, query_desc: &
 
                 let mut p = thispb.lock().unwrap();
                 p.update(1);
-                p.write(_msg);
+                if print_results {
+                    p.write(_msg);
+                }
                 drop(p);
             }
         }));

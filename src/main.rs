@@ -67,7 +67,7 @@ fn main() {
 
     /* get info for query img */
     let (_, desc_query) = match extract_single(cache.clone(),config.resize_dimensions.clone(), &query_img_path) {
-        Some((kp_query, desc_query)) => (kp_query, desc_query),
+        Some((kp_query, desc_query, _)) => (kp_query, desc_query),
         None => {
             println!("{} -- unable to open file: {}", style("ERROR").bold().bright().red(), query_img_path);
             return

@@ -8,5 +8,6 @@ pub struct Config {
     pub outlier_zscore_thresh: f32,
     pub num_workers: u32,
     pub resize_dimensions: [u32; 2],
-    pub ratio_test_ratio: f32
+    pub ratio_test_ratio: f32,
+    pub print_live_analysis_results: bool
 }
