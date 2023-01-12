@@ -86,10 +86,10 @@ pub fn extract_single(cache: Arc<Mutex<Db>>, resize_dims: [u32; 2], path: &Strin
                 let mykeypoints: Vec<MyKeyPoint> = keypoints.iter().map(|kp| MyKeyPoint(*kp)).collect();
                 let mydescriptors: Vec<Vec<f32>> = descriptors.iter().map(|x| bitarray_to_floatvec(x)).collect();
                 let ce: CacheEntry = CacheEntry{path: path.to_string(), keypoints: mykeypoints, descriptors: mydescriptors};
+                let ce_ser: Vec<u8> = bincode::serialize(&ce).unwrap();
 
                 /* add to database */
                 let cache_mguard = cache.lock().unwrap();
-                let ce_ser: Vec<u8> = bincode::serialize(&ce).unwrap();
                 let _ = cache_mguard.insert(path, ce_ser);
                 drop(cache_mguard);
 
@@ -155,7 +155,7 @@ fn get_num_matches(ratio_test_ratio: f32, descs_query: &Vec<BitArray<64>>, descs
         let res = kdtree.nearest(&qarray, 10, &squared_euclidean).unwrap();
 
         /* do ratio test */
-        if res.len() > 1 && res[0].0 < ratio_test_ratio * res[1].0  {
+        if res.len() > 1 && res[0].0 / res[1].0 < ratio_test_ratio  {
             num_matches += 1;
         }
     }

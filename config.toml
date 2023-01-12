@@ -6,8 +6,15 @@ search_dirs_paths = [
 	"media/test2",
 	"media/test3",
 	"media/thermal-dogs-and-people",
-	"media/corrupted"
+	"media/corrupted",
+	# "media/Golf Batch 4",
+	# "media/Self Driving Car",
+	# "media/Pascal VOC 2012",
+	# "media/Buildings Instance Segmentation"
 ]
+
+# display
+print_live_analysis_results = true
 
 # performance
 num_workers = 0
