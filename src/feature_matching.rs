@@ -46,7 +46,7 @@ pub fn extract_single(cache: Arc<Mutex<Db>>, resize_dims: [u32; 2], path: &Strin
 
             Some(val) => {
 
-                println!("{}: {}", style("importing from cache").bold().yellow(), path.clone());
+                // println!("{}: {}", style("importing from cache").bold().yellow(), path.clone());
 
                 let ce: CacheEntry = bincode::deserialize(&val).unwrap();
                 let mykeypoints: Vec<KeyPoint> = ce.keypoints.iter().map(|kp| kp.0).collect();
@@ -93,7 +93,7 @@ pub fn extract_single(cache: Arc<Mutex<Db>>, resize_dims: [u32; 2], path: &Strin
                 let _ = cache_mguard.insert(path, ce_ser);
                 drop(cache_mguard);
 
-                println!("{}: {}", style("added to cache ").bold().green(), path.clone());
+                // println!("{}: {}", style("added to cache ").bold().green(), path.clone());
 
                 /* return */
                 Some((keypoints, descriptors))
