@@ -1,30 +1,24 @@
+use crate::cache::{CacheEntry, MyKeyPoint};
 use crate::config::Config;
 
 // use std::path::Path;
 // use cv::{feature::akaze::Akaze, KeyPoint, BitArray};
 // use cv::feature::akaze
 use akaze::{Akaze, KeyPoint};
-use serde::ser::SerializeStruct;
 use serde::{Serialize, Deserialize};
-use std::iter::zip;
 use std::sync::{Arc, Mutex};
-use std::thread::{self, JoinHandle};
+use std::thread;
 use bitarray::BitArray;
 // use image::dynimage::DynamicImage;
-// use std::path::Path;
 use kdam::{tqdm, BarExt};
 use image::imageops::FilterType;
 // use std::collections::HashMap;
 use std::fmt;
 use console::style;
-use indicatif::{HumanDuration, MultiProgress, ProgressBar, ProgressStyle};
 use num_cpus;
-use sled::{Db, IVec};
+use sled::Db;
 use bincode;
-use std::convert::From;
-use serde::{Serializer, Deserializer};
 use kdtree::KdTree;
-use kdtree::ErrorKind;
 use kdtree::distance::squared_euclidean;
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -51,7 +45,21 @@ pub fn extract_single(cache: Arc<Mutex<Db>>, resize_dims: [u32; 2], path: &Strin
         Ok(res) => match res {
 
             Some(val) => {
-                panic!("a value was returned from the database somehow...");
+
+                println!("{}: {}", style("importing from cache").bold().yellow(), path.clone());
+
+                let ce: CacheEntry = bincode::deserialize(&val).unwrap();
+                let mykeypoints: Vec<KeyPoint> = ce.keypoints.iter().map(|kp| kp.0).collect();
+                let mydescriptors: Vec<BitArray<64>> = ce.descriptors.iter().map(|d| {
+                    let mut arr: [u8; 64] = [0 as u8; 64];
+                    
+                    for (i, byte) in d.iter().enumerate() {
+                        arr[i] = byte.clone() as u8;
+                    }
+                    
+                    BitArray::new(arr)
+                }).collect();
+                Some((mykeypoints, mydescriptors))
             },
 
             None => {
@@ -65,7 +73,7 @@ pub fn extract_single(cache: Arc<Mutex<Db>>, resize_dims: [u32; 2], path: &Strin
 
                     Ok(img) => img.resize(nwidth, nheight, filter),
 
-                    Err(err) => {
+                    Err(_) => {
                         // println!("\n------------------");
                         // println!("{}: unable to open {}\n\n{}", style("ERROR").bold().bright().red(), style(path).bold().bright(), err);
                         // println!("------------------\n");
@@ -75,16 +83,23 @@ pub fn extract_single(cache: Arc<Mutex<Db>>, resize_dims: [u32; 2], path: &Strin
             
                 /* return extracted info */
                 let (keypoints, descriptors) = akaze.extract(&img);
+                let mykeypoints: Vec<MyKeyPoint> = keypoints.iter().map(|kp| MyKeyPoint(*kp)).collect();
+                let mydescriptors: Vec<Vec<f32>> = descriptors.iter().map(|x| bitarray_to_floatvec(x)).collect();
+                let ce: CacheEntry = CacheEntry{path: path.to_string(), keypoints: mykeypoints, descriptors: mydescriptors};
 
                 /* add to database */
-                // let data = 
-                // let _ = cache.insert(path, (keypoints, descriptors)).unwrap().unwrap();
+                let cache_mguard = cache.lock().unwrap();
+                let ce_ser: Vec<u8> = bincode::serialize(&ce).unwrap();
+                let _ = cache_mguard.insert(path, ce_ser);
+                drop(cache_mguard);
+
+                println!("{}: {}", style("added to cache ").bold().green(), path.clone());
 
                 /* return */
                 Some((keypoints, descriptors))
             }
         },
-        Err(err) => panic!("error with database")
+        Err(err) => panic!("error with database: {}", err)
     }
 }
 
@@ -114,10 +129,9 @@ pub fn floatvec_to_floatarray(fv: &Vec<f32>) -> [f32; 64] {
     desc_array
 }
 
-
 fn get_num_matches(ratio_test_ratio: f32, descs_query: &Vec<BitArray<64>>, descs_search: (&Vec<BitArray<64>>, &String)) -> u32 {
 
-    let (descs, path) = descs_search;
+    let (descs, _) = descs_search;
     
     /* fit nearest neighbors classifier to query descriptors */
     let mut kdtree = KdTree::new(64);
@@ -128,31 +142,6 @@ fn get_num_matches(ratio_test_ratio: f32, descs_query: &Vec<BitArray<64>>, descs
         let desc_array: [f32; 64] = floatvec_to_floatarray(&desc_vec);
         let _ = kdtree.add(desc_array, descnum);
     };
-    // let mut tree = RTree::bulk_load(rtreeelements);
-
-    // let mut tokens = Vec::new();
-    // let mut elements = granne::angular::Vectors::new();
-
-    /* add query descriptor points to kdtree */
-    // for (i, desc) in descs.iter().enumerate() {
-
-    //     /* convert from u8 to f32 for search compatibility */
-    //     let vecf32 = bitarray_to_floatarray(desc);
-
-    //     /* add to collection */
-    //     tokens.push(i);
-    //     elements.push(&granne::angular::Vector::from(Vec::from(vecf32)));
-    //     // tree.insert([i, vecf32]);
-    // }
-
-    // building the index
-    // let build_config = granne::BuildConfig::default().show_progress(false).max_search(10); // increase this for better results
-
-    // let mut builder = granne::GranneBuilder::new(build_config, elements);
-
-    // builder.build();
-
-    // let index = builder.get_index();
 
     let mut num_matches: u32 = 0;
 
@@ -169,11 +158,7 @@ fn get_num_matches(ratio_test_ratio: f32, descs_query: &Vec<BitArray<64>>, descs
         if res.len() > 1 && res[0].0 < ratio_test_ratio * res[1].0  {
             num_matches += 1;
         }
-
-        // pb.inc(1);
     }
-
-    // pb.finish_with_message(format!(" --> {} matches", num_matches));
 
     num_matches
 }
@@ -229,17 +214,17 @@ pub fn calculate_similarities(cache: Arc<Mutex<Db>>, cfg: &Config, query_desc: &
 
             for path in chunk.to_owned() {   
                 
-                let mut msg: String = String::new();
+                let mut _msg: String = String::new();
                 
                 /* get keypoints and descriptors for this search image */
                 match extract_single(thiscache.clone(), resize_dims, &path) {
 
-                    Some((keypoints, descriptors)) => {
+                    Some((_, descriptors)) => {
 
                         /* calculte similarity to query image (num matches) */
                         let num_matches = get_num_matches(ratio_test_ratio, &this_qdesc, (&descriptors, &path));
             
-                        msg = format!("{:>6} matches <- {}", num_matches, style(path.clone()).bold().blue());
+                        _msg = format!("{:>6} matches <- {}", num_matches, style(path.clone()).bold().blue());
             
                         /* add extracted info to output */
                         let mut thisinfo_guard = thisinfo.lock().unwrap();
@@ -248,7 +233,7 @@ pub fn calculate_similarities(cache: Arc<Mutex<Db>>, cfg: &Config, query_desc: &
                     },
 
                     None => {
-                        msg = format!("{}: unable to open {}, skipping", style("ERROR").bold().bright().red(), style(path.clone()).bold());
+                        _msg = format!("{}: unable to open {}, skipping", style("ERROR").bold().bright().red(), style(path.clone()).bold());
                         let mut failed_paths = thisfailedpaths.lock().unwrap();
                         failed_paths.push(path.clone());
                     }
@@ -256,7 +241,7 @@ pub fn calculate_similarities(cache: Arc<Mutex<Db>>, cfg: &Config, query_desc: &
 
                 let mut p = thispb.lock().unwrap();
                 p.update(1);
-                p.write(msg);
+                p.write(_msg);
                 drop(p);
             }
         }));

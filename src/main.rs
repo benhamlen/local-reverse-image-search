@@ -37,16 +37,17 @@ fn main() {
     let args = ReverseImageSearchArgs::parse();
 
     /* load config */
-    println!("\n{} loading config...", style("[1/3]").bold().green());
+    println!("\n{} loading config...", style("[1/4]").bold().green());
     let config = load_config(args.config_file_path);
 
     /* get query image path */
+    println!("\n{} loading query image...", style("[2/4]").bold().green());
     let query_img_path: String = match args.query_img_path {
         Some(path) => {
             path.clone()
         },
         None => {
-            println!("please choose a file, click cancel to quit");
+            println!("please select a query image file, click cancel to quit");
 
             match FileDialog::new().set_directory(".").pick_file() {
                 Some(path) => path.to_string_lossy().to_string(),
@@ -57,8 +58,6 @@ fn main() {
             }
         }
     };
-
-    println!("query image: {}", query_img_path);
 
     /* start a timer */
     let timer: Instant = Instant::now();
@@ -76,11 +75,11 @@ fn main() {
     };
 
     /* get all image file paths in search directories */
-    println!("\n{} exploring {} search directories...", style("[2/3]").bold().green(), &config.search_dirs_paths.len());
+    println!("\n{} exploring {} search directories...", style("[3/4]").bold().green(), &config.search_dirs_paths.len());
     let img_paths = find_image_files(&config, &config.search_dirs_paths);
 
     /* get info for search imgs */
-    println!("\n\n{} finding matching points in images...", style("[3/3]").bold().green());
+    println!("\n\n{} finding matching points in images...", style("[4/4]").bold().green());
     let (info_search_arc, failed_paths) = calculate_similarities(cache.clone(), &config, &desc_query, img_paths);
 
     let mut info_search = info_search_arc.lock().unwrap();

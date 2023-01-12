@@ -7,7 +7,6 @@ use std::path::Path;
 use walkdir::WalkDir;
 use std::fs;
 // use  native_dialog::FileDialog;
-use rfd::FileDialog;
 use console::style;
 
 /// returns true if path leads to image file,
