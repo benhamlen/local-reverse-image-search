@@ -38,7 +38,13 @@ fn main() {
 
     /* load config */
     println!("\n{} loading config...", style("[1/4]").bold().green());
-    let config = load_config(args.config_file_path);
+    let config = load_config(&args.config_file_path);
+
+    /* verify that some number of search paths were specified in config file */
+    if config.search_dirs_paths.len() == 0 {
+        println!("{}: no search paths specified, please enter some in {}", style("ERROR").bold().bright().red(), style(&args.config_file_path).bold());
+        return
+    }
 
     /* get query image path */
     println!("\n{} loading query image...", style("[2/4]").bold().green());
@@ -59,6 +65,7 @@ fn main() {
         }
     };
 
+
     /* start a timer */
     let timer: Instant = Instant::now();
 
@@ -77,6 +84,12 @@ fn main() {
     /* get all image file paths in search directories */
     println!("\n{} exploring {} search directories...", style("[3/4]").bold().green(), &config.search_dirs_paths.len());
     let img_paths = find_image_files(&config, &config.search_dirs_paths);
+
+    /* verify that non-zero number of images were found */
+    if img_paths.len() == 0 {
+            println!("{}: no images found in search paths", style("ERROR").bold().bright().red());
+            return
+    }
 
     /* get info for search imgs */
     println!("\n\n{} finding matching points in images...", style("[4/4]").bold().green());

@@ -63,7 +63,9 @@ pub fn find_image_files(config: &Config, dir_paths: &Vec<String>) -> Vec<String>
                         // println!("{}", direntry.path().display());
                         // pb.set_message(format!("{}", direntry.path().to_string_lossy()));
                         pb.inc(1);
-                        this_img_paths.lock().unwrap().push(direntry.path().to_string_lossy().to_string());
+                        let mut impaths = this_img_paths.lock().unwrap();
+                        impaths.push(direntry.path().to_string_lossy().to_string());
+                        drop(impaths);
                         num_files += 1;
                     }
                     Err(_) => println!("error opening file: {}", path)
@@ -87,7 +89,7 @@ pub fn find_image_files(config: &Config, dir_paths: &Vec<String>) -> Vec<String>
     out
 }
 
-pub fn load_config(filepath: String) -> Config {
+pub fn load_config(filepath: &String) -> Config {
     
     /* load config file as json string */
     let data = fs::read_to_string(&filepath).expect("Unable to read config file");
